@@ -1,0 +1,44 @@
+{
+  "name": "ai-office-landing-hooks",
+  "description": "AI Office Landing Skill - Automated workflow hooks",
+  "hooks": [],
+  "watchers": [
+    {
+      "description": "监控 ai-office/outputs/ 变化，自动触发 Orchestrator",
+      "path": "ai-office/outputs/*",
+      "action": {
+        "type": "command",
+        "command": "~/.claude/skills/ai-office-landing/orchestrator.sh",
+        "condition": "file_count >= 3"
+      }
+    }
+  ],
+  "commands": [
+    {
+      "name": "/landing",
+      "alias": "ai-office-landing",
+      "autocomplete": [
+        {
+          "option": "--serial",
+          "description": "串行执行（分天执行，避免超限）"
+        },
+        {
+          "option": "--parallel",
+          "description": "并行执行（默认：4个 Agent 同时运行）"
+        },
+        {
+          "option": "--human",
+          "description": "人工 Critic 审查（节省成本）"
+        },
+        {
+          "option": "--skip-phase-0",
+          "description": "跳过 Phase 0（设计研究阶段）"
+        },
+        {
+          "option": "--resume",
+          "description": "从 checkpoint 恢复执行"
+        }
+      ]
+    }
+  ]
+}

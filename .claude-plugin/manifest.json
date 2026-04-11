@@ -1,0 +1,69 @@
+{
+  "name": "ai-office-landing",
+  "version": "2.3.0",
+  "description": "AI-powered landing page generator with multi-agent orchestration, cost tracking, and dynamic skill discovery",
+  "author": "Claude Code User",
+  "license": "MIT",
+  "categories": ["ai-workflow", "multi-agent", "landing-page"],
+  "requirements": {
+    "claude-version": ">=0.5.0",
+    "platform": ["darwin", "linux"],
+    "dependencies": {
+      "bash": ">=4.0",
+      "jq": ">=1.6",
+      "node": ">=16.0"
+    }
+  },
+  "entry-points": {
+    "main": "SKILL.md",
+    "readme": "README.md",
+    "landing": "SKILL.md"
+  },
+  "provides": {
+    "commands": [
+      {
+        "name": "/landing",
+        "description": "启动 AI Office Landing Page 生成工作流",
+        "shortcut": true
+      }
+    ],
+    "scripts": [
+      "cost-tracker.sh",
+      "discover-skills.sh",
+      "orchestrator.sh",
+      "state-management.sh"
+    ],
+    "prompts": [
+      "prompts/interviewer.md",
+      "prompts/copywriter.md",
+      "prompts/designer.md",
+      "prompts/frontend.md",
+      "prompts/seo.md",
+      "prompts/critic.md",
+      "prompts/benchmark-analyzer.md",
+      "prompts/orchestrator-summary.md"
+    ]
+  },
+  "capabilities": {
+    "multi-agent": true,
+    "cost-tracking": true,
+    "skill-discovery": true,
+    "benchmark-analysis": true,
+    "state-management": true,
+    "checkpoint-recovery": true
+  },
+  "changelog": {
+    "2.3.0": "新增 Phase 3.5 Orchestrator 和动态 Skill 发现",
+    "2.2.0": "添加成本追踪和基准分析",
+    "2.0.0": "对话式交互升级",
+    "1.0.0": "批处理模式基础版本"
+  },
+  "homepage": "https://github.com/your-org/ai-office-landing#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/ai-office-landing.git"
+  },
+  "issues": {
+    "url": "https://github.com/your-org/ai-office-landing/issues"
+  }
+}
