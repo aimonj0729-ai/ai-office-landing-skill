@@ -1,6 +1,7 @@
 # Claude Code state files
 ai-office/state.json
 ai-office/cost/
+ai-office/.adapter-status
 
 # macOS
 .DS_Store
@@ -17,11 +18,16 @@ ai-office/cost/
 # Temporary files
 *.tmp
 *.bak
+*.backup
 *~
 
 # Context files (generated)
 context/
 .skill-registry.cache
 
-# Examples (if user wants to clean up)
-examples/
+# Plugin metadata (local only)
+.claude-plugin/
+
+# Backup files
+*.with-mapfile
+fix-mapfile.sh

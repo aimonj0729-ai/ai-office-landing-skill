@@ -55,6 +55,27 @@ ai-office-landing [options]
 - `--resume`: 从 state.json 恢复上次的对话式工作流
 - `--auto-continue`: 自动继续，不暂停等待用户确认（适合批处理场景）
 - `--human-critic`: 启用人工 Critic 模式
+- `--cost-saving`: 启用成本节省模式，自动将 MEDIUM/LOW 角色路由到 Kimi/DeepSeek
+- `--adapter <name>`: 强制所有 Executor 使用指定 adapter (claude-agent|kimi-api|deepseek-api)
+
+**Adapter 路由 (v2.4 新增):**
+
+Executor 任务通过 `adapters/route.sh` 自动路由到最优 adapter：
+
+| 角色 | 质量等级 | 默认 Adapter | 成本节省模式 |
+|------|---------|-------------|------------|
+| Interviewer, Critic, Integrator | HIGH | claude-agent | claude-agent (不可降级) |
+| Frontend | MEDIUM-HIGH | claude-agent | deepseek-coder |
+| Copywriter, Designer | MEDIUM | claude-agent | kimi-api |
+| SEO | LOW | claude-agent | kimi-api / deepseek-api |
+
+环境变量配置：
+```bash
+export KIMI_API_KEY="your-key"        # 启用 Kimi adapter
+export DEEPSEEK_API_KEY="your-key"    # 启用 DeepSeek adapter
+export COST_SAVING_MODE=true          # 自动路由到便宜的 adapter
+export AI_OFFICE_ADAPTER=kimi-api     # 强制指定 adapter (HIGH 角色除外)
+```
 
 **对话式示例：**
 ```bash
@@ -600,8 +621,18 @@ execute_with_qa() {
     fi
   fi
   
-  # 执行 task
-  execute_task "$task_id"
+  # 通过 adapter 路由执行 task (v2.4: 自动选择最优 adapter)
+  # route.sh 根据角色质量等级 + 环境变量自动选择 claude-agent / kimi-api / deepseek-api
+  local adapter_script="${SKILL_ROOT}/adapters/route.sh"
+  local prompt_file=$("$adapter_script" "$role" "$task_id" "$output_path")
+  
+  # 如果 adapter 返回的是 prompt 文件 (claude-agent 模式), 则调用 Agent 工具
+  # 如果 adapter 直接写了 output (kimi-api / deepseek-api 模式), 则跳过 Agent 调用
+  if [[ -f "$output_path" ]]; then
+    log "✓ Adapter 已直接生成输出: $output_path"
+  else
+    execute_task "$task_id"
+  fi
   
   # [NEW] 检查是否有问题
   check_task_questions "$role" "$output_path"
