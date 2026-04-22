@@ -36,21 +36,44 @@ log_error() {
     exit 1
 }
 
-log_success() {
-    echo -e "${GREEN}✓${NC} $1"
-}
-
-log_warn() {
-    echo -e "${YELLOW}⚠${NC} $1"
-}
-
-log_error() {
-    echo -e "${RED}✗${NC} $1"
-}
-
 #=====================================
 # Core Discovery Functions
 #=====================================
+
+# Emit unique skill names whose docs mention the provided keyword.
+collect_skill_matches() {
+    local keyword="$1"
+    local skills_root="${SKILL_ROOT}/../"
+    local skill_file=""
+    local skill_dir=""
+    local skill_name=""
+
+    while IFS= read -r -d '' skill_file; do
+        if grep -q -i -- "$keyword" "$skill_file" 2>/dev/null; then
+            skill_dir="$(dirname "$skill_file")"
+            if [[ -f "$skill_dir/NAME" ]]; then
+                skill_name="$(tr -d '\r\n' < "$skill_dir/NAME")"
+            else
+                skill_name="$(basename "$skill_dir")"
+            fi
+            printf '%s\n' "$skill_name"
+        fi
+    done < <(find "$skills_root" \( -name "SKILL.md" -o -name "README.md" \) -type f -print0 2>/dev/null) | sort -u
+}
+
+has_array_value() {
+    local needle="$1"
+    shift
+    local item=""
+
+    for item in "$@"; do
+        if [[ "$item" == "$needle" ]]; then
+            return 0
+        fi
+    done
+
+    return 1
+}
 
 # Discover skills by keyword
 # Usage: discover_skills "keyword" "category"
@@ -58,21 +81,15 @@ discover_skills() {
     local keyword="$1"
     local category="${2:-all}"
     local skills_root="${SKILL_ROOT}/../"
+    local skill_name=""
+    local unique_matches=()
 
     log "搜索包含 '$keyword' 的相关 skills..."
 
-    # Find matching skills
-    local matches=()
-    while IFS= read -r skill_file; do
-        if [[ -f "$skill_file" ]]; then
-            local skill_dir=$(dirname "$skill_file")
-            local skill_name=$(basename "$skill_dir")
-            matches+=("$skill_name")
-        fi
-    done < <(find "$skills_root" -name "SKILL.md" -o -name "README.md" 2>/dev/null | xargs grep -l -i "$keyword" 2>/dev/null || true)
-
-    # Remove duplicates
-    local unique_matches=($(printf "%s\n" "${matches[@]}" | sort -u))
+    while IFS= read -r skill_name; do
+        [[ -n "$skill_name" ]] || continue
+        unique_matches+=("$skill_name")
+    done < <(collect_skill_matches "$keyword")
 
     if [[ ${#unique_matches[@]} -eq 0 ]]; then
         log_warn "未找到与 '$keyword' 相关的 skills"
@@ -185,24 +202,29 @@ auto_discover_for_designer() {
     )
 
     local discovered=()
+    local keyword=""
+    local match=""
 
     for keyword in "${designer_keywords[@]}"; do
-                local tmp_array=()
-        while IFS= read -r item; do
-            tmp_array+=("$item")
-        done
-        matches=("${tmp_array[@]}")
-         "$keyword" 2>/dev/null | grep "^-" | sed 's/^  - //' || true)
-        discovered+=("${matches[@]}")
+        while IFS= read -r match; do
+            [[ -n "$match" ]] || continue
+            [[ "$match" == "ai-office-landing" ]] && continue
+            if ! has_array_value "$match" "${discovered[@]}"; then
+                discovered+=("$match")
+            fi
+        done < <(collect_skill_matches "$keyword")
     done
 
-    # Remove duplicates and this skill itself
-    local unique_discovered=($(printf "%s\n" "${discovered[@]}" | grep -v "^ai-office-landing$" | sort -u))
+    if [[ ${#discovered[@]} -eq 0 ]]; then
+        log_warn "未找到适合 Designer 的外部 skills"
+        write_state "designer.discovered_skills" ""
+        return 0
+    fi
 
-    log_success "为 Designer 发现 ${#unique_discovered[@]} 个候选 skills"
+    log_success "为 Designer 发现 ${#discovered[@]} 个候选 skills"
 
     # Store in state for Designer to reference
-    write_state "designer.discovered_skills" "$(printf '%s,' "${unique_discovered[@]}")"
+    write_state "designer.discovered_skills" "$(printf '%s,' "${discovered[@]}")"
 
     return 0
 }
@@ -243,34 +265,33 @@ interactive_skill_selection() {
 suggest_skills_for_task() {
     local task_desc="$1"
     local agent_name="${2:-all}"
+    local suggestions=()
+    local keyword=""
+    local match=""
 
     log "分析任务需求: $task_desc"
 
     # Extract keywords from task
     local keywords=$(echo "$task_desc" | tr ' ' '\n' | grep -E "(design|code|test|deploy|build|image|color|typography|layout)" | sort -u)
 
-    local suggestions=()
-
     for keyword in $keywords; do
-                local tmp_array=()
-        while IFS= read -r item; do
-            tmp_array+=("$item")
-        done
-        matches=("${tmp_array[@]}")
-         "$keyword" 2>/dev/null | grep "^-" | sed 's/^  - //' || true)
-        suggestions+=("${matches[@]}")
+        while IFS= read -r match; do
+            [[ -n "$match" ]] || continue
+            if ! has_array_value "$match" "${suggestions[@]}"; then
+                suggestions+=("$match")
+            fi
+        done < <(collect_skill_matches "$keyword")
     done
 
-    # Remove duplicates
-    local unique_suggestions=($(printf "%s\n" "${suggestions[@]}" | sort -u))
-
-    if [[ ${#unique_suggestions[@]} -gt 0 ]]; then
+    if [[ ${#suggestions[@]} -gt 0 ]]; then
         log_success "建议的 skills:"
-        for suggestion in "${unique_suggestions[@]}"; do
+        for suggestion in "${suggestions[@]}"; do
             echo "  - $suggestion"
         done
 
-        write_state "skills.suggested" "$(printf '%s,' "${unique_suggestions[@]}")"
+        write_state "skills.suggested" "$(printf '%s,' "${suggestions[@]}")"
+    else
+        log_warn "未找到与任务匹配的 skills"
     fi
 
     return 0
