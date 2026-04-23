@@ -31,6 +31,18 @@
 ### v1.0.0
 - **基础工作流**: 批处理模式的 5 阶段 Agent 协作
 
+## Autopilot Updates
+
+<!-- github-autopilot:updates:start -->
+
+### 2026-04-23 22:05
+
+- 已修复 `discover-skills.sh` 在 macOS Bash 3 下的自动发现链路，`discover`、`auto-designer`、`suggest` 现已恢复可用。
+- `auto-designer` 现在会自动去重候选 skill，并跳过当前 `ai-office-landing` skill 自身，避免把内置 skill 当作外部参考重复加载。
+- 后续自动化更新会默认直接同步到 `main`，并把每次新增、修复或调整的摘要持续写入本节，方便直接在仓库首页查看。
+
+<!-- github-autopilot:updates:end -->
+
 ## 快速开始
 
 ```bash
