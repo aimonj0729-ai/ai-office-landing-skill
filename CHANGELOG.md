@@ -2,6 +2,12 @@
 
 All notable changes to AI Office Landing Skill will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- Repaired `discover-skills.sh` so `auto-designer` and `suggest` run again after a broken shell fragment was introduced
+- Skill discovery now deduplicates matches and skips the current `ai-office-landing` skill during Designer auto-discovery
+
 ## [2.4.0] - 2026-04-12
 
 ### Added

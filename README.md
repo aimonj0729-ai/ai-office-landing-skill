@@ -74,6 +74,8 @@ Designer Agent 可自动发现相关 skills：
 ~/.claude/skills/ai-office-landing/discover-skills.sh suggest "coffee shop branding"
 ```
 
+`auto-designer` 现在会自动去重候选项，并跳过当前 `ai-office-landing` skill 自身，避免把内置 skill 误当作外部参考重复加载。
+
 ### 3. 智能决策支持
 - **Skill 加载**: 自动将相关 skill 内容加载到 Agent 上下文
 - **引用参考**: 在 design-spec.md 中引用 skill 提供的洞察
