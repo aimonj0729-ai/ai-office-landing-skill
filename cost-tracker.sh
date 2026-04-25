@@ -17,15 +17,9 @@ NC='\033[0m'
 # Claude Pro daily limit
 CLAUDE_PRO_LIMIT=${CLAUDE_PRO_LIMIT:-45000}
 
-# Cost per phase (approximate)
-declare -A PHASE_COSTS=(
-    ["0"]="15000"  # Design Researcher
-    ["1"]="13000"  # Interview
-    ["2"]="8000"   # Style Tokens & Tasks
-    ["3"]="80000"  # Executors (4x20k)
-    ["4"]="20000"  # Critic
-    ["5"]="5000"   # Integration
-)
+# Cost database paths
+COST_DB_PATH="ai-office/cost/session-cost.json"
+COST_HISTORY_FILE="${HOME}/.claude/cost-history.json"
 
 # Logging with color
 log_cost() {
@@ -44,6 +38,81 @@ log_success() {
     echo -e "${GREEN}[OK]${NC} $1"
 }
 
+# Format token counts for display; fall back to raw numbers on macOS systems
+# where GNU coreutils' numfmt is not installed.
+format_tokens() {
+    local value="${1:-0}"
+
+    if command -v numfmt >/dev/null 2>&1; then
+        numfmt --to=iec "$value"
+    else
+        printf "%s" "$value"
+    fi
+}
+
+# Get the estimated token cost for a workflow phase.
+get_phase_cost() {
+    case "$1" in
+        0) echo 15000 ;;  # Design Researcher
+        1) echo 13000 ;;  # Interview
+        2) echo 8000 ;;   # Style Tokens & Tasks
+        3) echo 80000 ;;  # Executors (4x20k)
+        4) echo 20000 ;;  # Critic
+        5) echo 5000 ;;   # Integration
+        *) echo 0 ;;
+    esac
+}
+
+# Read a value from the cost database.
+read_cost_db() {
+    local key="$1"
+    local default_value="${2:-}"
+
+    if [[ ! -f "$COST_DB_PATH" ]]; then
+        echo "$default_value"
+        return
+    fi
+
+    local value
+    value=$(jq -r ".$key // empty" "$COST_DB_PATH" 2>/dev/null)
+
+    if [[ -z "$value" ]]; then
+        echo "$default_value"
+    else
+        echo "$value"
+    fi
+}
+
+# Calculate an integer usage percentage.
+calculate_usage_percentage() {
+    local used="${1:-0}"
+
+    if [[ "$CLAUDE_PRO_LIMIT" -le 0 ]]; then
+        echo 0
+        return
+    fi
+
+    echo $((used * 100 / CLAUDE_PRO_LIMIT))
+}
+
+# Keep the cached summary fields aligned with the current daily total.
+sync_current_usage() {
+    local used="${1:-0}"
+    local remaining=$((CLAUDE_PRO_LIMIT - used))
+    local percentage
+
+    if [[ "$remaining" -lt 0 ]]; then
+        remaining=0
+    fi
+
+    percentage=$(calculate_usage_percentage "$used")
+
+    update_cost_db "current_session.tokens_used" "$used"
+    update_cost_db "current_session.tokens_remaining" "$remaining"
+    update_cost_db "current_session.percentage_used" "$percentage"
+    update_cost_db "daily_usage.claude" "$used"
+}
+
 #=====================================
 # Core Functions
 #=====================================
@@ -53,12 +122,12 @@ init_cost_tracking() {
     mkdir -p ai-office/cost
 
     # Create cost log if it doesn't exist
-    if [[ ! -f "ai-office/cost/session-cost.json" ]]; then
-        cat > ai-office/cost/session-cost.json << EOF
+    if [[ ! -f "$COST_DB_PATH" ]]; then
+        cat > "$COST_DB_PATH" << EOF
 {
   "session_id": "$(date +%Y%m%d_%H%M%S)",
   "start_time": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "total_token_limit": $CLUADE_PRO_LIMIT,
+  "total_token_limit": $CLAUDE_PRO_LIMIT,
   "daily_usage": {"claude": 0, "kimi": 0, "deepseek": 0},
   "current_session": {
     "phase": 0,
@@ -71,14 +140,29 @@ init_cost_tracking() {
 EOF
     fi
 
-    # Try to load daily usage from history
-    if [[ -f "~/.claude/cost-history.json" ]]; then
-        DAILY_USAGE=$(jq -r ".$(date +%Y-%m-%d).claude // 0" ~/.claude/cost-history.json 2>/dev/null || echo 0)
-        update_cost_db "daily_usage.claude" "$DAILY_USAGE"
-        update_remaining_estimate
+    # Seed the session counters from the last saved daily total if present.
+    local today
+    local restored_usage=0
+    local existing_usage
+
+    today=$(date +%Y-%m-%d)
+    existing_usage=$(read_cost_db "current_session.tokens_used" "0")
+
+    if [[ -f "$COST_HISTORY_FILE" ]]; then
+        restored_usage=$(jq -r --arg today "$today" '.[$today].claude // 0' "$COST_HISTORY_FILE" 2>/dev/null || echo 0)
     fi
 
-    log_cost "初始化成本追踪 - 日限额: $(numfmt --to=iec $CLAUDE_PRO_LIMIT) tokens"
+    if [[ "$existing_usage" -gt "$restored_usage" ]]; then
+        restored_usage="$existing_usage"
+    fi
+
+    sync_current_usage "$restored_usage"
+
+    if [[ "$restored_usage" -gt 0 ]]; then
+        log_cost "已恢复今日累计用量: $(format_tokens "$restored_usage") tokens"
+    fi
+
+    log_cost "初始化成本追踪 - 日限额: $(format_tokens "$CLAUDE_PRO_LIMIT") tokens"
 }
 
 # Update cost database
@@ -86,39 +170,46 @@ update_cost_db() {
     local key="$1"
     local value="$2"
 
-    if [[ ! -f "ai-office/cost/session-cost.json" ]]; then
+    if [[ ! -f "$COST_DB_PATH" ]]; then
         init_cost_tracking
     fi
 
     # Read current state
-    local state=$(cat ai-office/cost/session-cost.json)
+    local state
+    state=$(cat "$COST_DB_PATH")
 
     # Update using jq
-    echo "$state" | jq ".$key = $value" > ai-office/cost/session-cost.json.tmp
+    echo "$state" | jq ".$key = $value" > "${COST_DB_PATH}.tmp"
 
     if [[ $? -eq 0 ]]; then
-        mv ai-office/cost/session-cost.json.tmp ai-office/cost/session-cost.json
+        mv "${COST_DB_PATH}.tmp" "$COST_DB_PATH"
     else
         log_error "Failed to update cost db: $key"
-        rm -f ai-office/cost/session-cost.json.tmp
+        rm -f "${COST_DB_PATH}.tmp"
     fi
 }
 
 # Get current usage
 get_current_usage() {
-    read_state "current_session.tokens_used" "0"
+    read_cost_db "current_session.tokens_used" "0"
 }
 
 # Get remaining tokens
 get_remaining_tokens() {
     local used=$(get_current_usage)
-    echo $(($CLAUDE_PRO_LIMIT - $used))
+    local remaining=$((CLAUDE_PRO_LIMIT - used))
+
+    if [[ "$remaining" -lt 0 ]]; then
+        remaining=0
+    fi
+
+    echo "$remaining"
 }
 
 # Calculate percentage used
 get_usage_percentage() {
     local used=$(get_current_usage)
-    python3 -c "print(int($used / $CLAUDE_PRO_LIMIT * 100))"
+    calculate_usage_percentage "$used"
 }
 
 #=====================================
@@ -162,10 +253,10 @@ display_cost_header() {
 
     echo ""
     echo -e "╔════════════════════════════════════════════════════════════╗"
-    echo -e "║  AI Office 成本追踪 · 日限额: $(numfmt --to=iec $CLAUDE_PRO_LIMIT) tokens  ║"
+    echo -e "║  AI Office 成本追踪 · 日限额: $(format_tokens "$CLAUDE_PRO_LIMIT") tokens  ║"
     echo -e "╠════════════════════════════════════════════════════════════╣"
-    echo -e "║  已用: $(numfmt --to=iec $used) tokens  ${bar}  ${percentage}%  ║"
-    echo -e "║  剩余: $(numfmt --to=iec $remaining) tokens                              ║"
+    echo -e "║  已用: $(format_tokens "$used") tokens  ${bar}  ${percentage}%  ║"
+    echo -e "║  剩余: $(format_tokens "$remaining") tokens                              ║"
     echo -e "╚════════════════════════════════════════════════════════════╝"
     echo ""
 }
@@ -177,18 +268,23 @@ display_cost_header() {
 # Estimate cost before phase
 estimate_phase_cost() {
     local phase="$1"
-    local cost=${PHASE_COSTS[$phase]:-0}
-    local current_usage=$(get_current_usage)
-    local projected_total=$((current_usage + cost))
-    local percentage=$((projected_total * 100 / CLAUDE_PRO_LIMIT))
+    local cost
+    local current_usage
+    local projected_total
+    local percentage
 
-    log_cost "预估 Phase $phase 消耗: $(numfmt --to=iec $cost) tokens"
-    log_cost "预计总消耗: $(numfmt --to=iec $projected_total) / $(numfmt --to=iec $CLAUDE_PRO_LIMIT) ($percentage%)"
+    cost=$(get_phase_cost "$phase")
+    current_usage=$(get_current_usage)
+    projected_total=$((current_usage + cost))
+    percentage=$((projected_total * 100 / CLAUDE_PRO_LIMIT))
+
+    log_cost "预估 Phase $phase 消耗: $(format_tokens "$cost") tokens"
+    log_cost "预计总消耗: $(format_tokens "$projected_total") / $(format_tokens "$CLAUDE_PRO_LIMIT") ($percentage%)"
 
     # Risk assessment
     if [[ $projected_total -gt $CLAUDE_PRO_LIMIT ]]; then
         echo ""
-        log_error "⚠️  警告: 预计会超出限额 $(numfmt --to=iec $((projected_total - CLAUDE_PRO_LIMIT))) tokens"
+        log_error "⚠️  警告: 预计会超出限额 $(format_tokens "$((projected_total - CLAUDE_PRO_LIMIT))") tokens"
         echo ""
         suggest_cost_saving_measures $phase
         return 1
@@ -246,7 +342,7 @@ record_actual_cost() {
     local current_usage=$(get_current_usage)
     local new_usage=$((current_usage + actual_cost))
 
-    update_cost_db "current_session.tokens_used" "$new_usage"
+    sync_current_usage "$new_usage"
     update_cost_db "current_session.phase" "$phase"
 
     # Update phase breakdown
@@ -258,7 +354,7 @@ record_actual_cost() {
     }"
 
     # Log the update
-    log_cost "Phase $phase 实际消耗: $(numfmt --to=iec $actual_cost) tokens"
+    log_cost "Phase $phase 实际消耗: $(format_tokens "$actual_cost") tokens"
     display_cost_summary
 }
 
@@ -321,8 +417,8 @@ display_cost_summary() {
     echo -e "┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓"
     echo -e "┃  成本摘要                                                  ┃"
     echo -e "┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫"
-    echo -e "┃  已用: $(numfmt --to=iec $used) tokens  ${bar}  ${percentage}%  ┃"
-    echo -e "┃  剩余: $(numfmt --to=iec $remaining) tokens                          ┃"
+    echo -e "┃  已用: $(format_tokens "$used") tokens  ${bar}  ${percentage}%  ┃"
+    echo -e "┃  剩余: $(format_tokens "$remaining") tokens                          ┃"
     echo -e "┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫"
     echo -e "┃  如需节省成本，下次可尝试:                                 ┃"
     echo -e "┃  • /landing --serial (串行执行)                           ┃"
@@ -338,10 +434,10 @@ display_cost_summary() {
 # Save daily summary to history
 save_daily_summary() {
     local today=$(date +%Y-%m-%d)
-    local summary_file="$HOME/.claude/cost-history.json"
+    local summary_file="$COST_HISTORY_FILE"
 
     # Ensure directory exists
-    mkdir -p "$HOME/.claude"
+    mkdir -p "$(dirname "$summary_file")"
 
     # Initialize if doesn't exist
     if [[ ! -f "$summary_file" ]]; then
@@ -352,11 +448,13 @@ save_daily_summary() {
     local used=$(get_current_usage)
     local current_data=$(cat "$summary_file")
 
-    echo "$current_data" | jq ".\"$today\" = {
-        \"claude\": $used,
-        \"sessions\": (.\"$today\".sessions // 0) + 1,
-        \"last_updated\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"
-    }" > "$summary_file.tmp"
+    echo "$current_data" | jq --arg today "$today" --arg last_updated "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --argjson used "$used" '
+        .[$today] = {
+            "claude": $used,
+            "sessions": ((.[$today].sessions // 0) + 1),
+            "last_updated": $last_updated
+        }
+    ' > "$summary_file.tmp"
 
     if [[ $? -eq 0 ]]; then
         mv "$summary_file.tmp" "$summary_file"
@@ -367,8 +465,7 @@ save_daily_summary() {
 
 # Display daily history
 display_daily_history() {
-    local summary_file="$HOME/.claude/cost-history.json"
-    local today=$(date +%Y-%m-%d)
+    local summary_file="$COST_HISTORY_FILE"
 
     if [[ ! -f "$summary_file" ]]; then
         log_cost "无历史记录"
@@ -382,14 +479,17 @@ display_daily_history() {
     # Show last 7 days
     for i in {0..6}; do
         local date=$(date -d "$i days ago" +%Y-%m-%d 2>/dev/null || date -v-"$i"d +%Y-%m-%d)
-        local usage=$(jq -r ".\"$date\".claude // 0" "$summary_file" 2>/dev/null || echo 0)
-        local sessions=$(jq -r ".\"$date\".sessions // 0" "$summary_file" 2>/dev/null || echo 0)
+        local usage
+        local sessions
+
+        usage=$(jq -r --arg day "$date" '.[$day].claude // 0' "$summary_file" 2>/dev/null || echo 0)
+        sessions=$(jq -r --arg day "$date" '.[$day].sessions // 0' "$summary_file" 2>/dev/null || echo 0)
 
         if [[ $usage -gt 0 ]]; then
             local bar=$(generate_progress_bar $((usage * 100 / CLAUDE_PRO_LIMIT)))
             printf "  %s: %s tokens %s %d%% (%d 会话)\n" \
                 "$date" \
-                "$(numfmt --to=iec $usage --format='%5f' | tr -d ' ')" \
+                "$(format_tokens "$usage")" \
                 "$bar" \
                 $((usage * 100 / CLAUDE_PRO_LIMIT)) \
                 "$sessions"
@@ -411,7 +511,7 @@ apply_cost_saving_mode() {
     local current_usage=$(get_current_usage)
     local remaining=$((CLAUDE_PRO_LIMIT - current_usage))
 
-    log_cost "启用成本节省模式（剩余: $(numfmt --to=iec $remaining)）"
+    log_cost "启用成本节省模式（剩余: $(format_tokens "$remaining")）"
 
     case $phase in
         0)
@@ -461,15 +561,19 @@ log_phase_completion() {
         \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"
     }"
 
-    log_success "Phase $phase 完成 ✓ 消耗: $(numfmt --to=iec $cost) tokens"
+    log_success "Phase $phase 完成 ✓ 消耗: $(format_tokens "$cost") tokens"
 }
 
 # Check if we should warn about cost
 should_warn_about_cost() {
     local phase="$1"
-    local cost=${PHASE_COSTS[$phase]:-0}
-    local current_usage=$(get_current_usage)
-    local projected_total=$((current_usage + cost))
+    local cost
+    local current_usage
+    local projected_total
+
+    cost=$(get_phase_cost "$phase")
+    current_usage=$(get_current_usage)
+    projected_total=$((current_usage + cost))
 
     # Warn if projected total exceeds 80%
     if [[ $((projected_total * 100 / CLAUDE_PRO_LIMIT)) -gt 80 ]]; then

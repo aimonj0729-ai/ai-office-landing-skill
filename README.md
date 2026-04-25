@@ -35,6 +35,24 @@
 
 <!-- github-autopilot:updates:start -->
 
+### 2026-04-25 11:14
+
+这次只做了一项高置信度改进：修复了成本追踪脚本的初始化与历史恢复链路。核心改动在 [cost-tracker.sh](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/cost-tracker.sh:41>)、[cost-tracker.sh](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/cost-tracker.sh:120>) 和 [cost-tracker.sh](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/cost-tracker.sh:435>)。原脚本会把 `total_token_limit` 变量名写错、从错误的数据文件读当前用量、写回日期键时 `jq` 表达式不稳，还依赖 Bash 4 关联数组和 `numfmt`。现在它会正确从 `~/.claude/cost-history.json` 恢复当天累计用量，改为兼容 macOS 默认 Bash 3 的相位成本实现，并在没有 `numfmt` 时自动回退到纯数字显示。
+
+README 和变更记录也已同步更新，用户可以直接在 [README.md](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:38>) 和 [README.md](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:214>) 看到这次修复说明；[CHANGELOG.md](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md:7>) 也补了 `Unreleased` 记录。
+
+已运行验证：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- 针对 `cost-tracker.sh` 做了临时 `HOME` smoke test：预置当天历史用量 `1234` 后，`init_cost_tracking` 正确恢复为 `1234/45000`；再记录 `2000` token 后，`session-cost.json` 和 `~/.claude/cost-history.json` 都更新为 `3234`
+
+未提交，也未推送。
+
+### 2026-04-25 11:10
+
+- 已修复 `cost-tracker.sh` 的初始化链路：当天限额字段会正确写入 `session-cost.json`，并能从 `~/.claude/cost-history.json` 恢复当日累计用量。
+- 成本追踪不再依赖 Bash 4 的关联数组；在 macOS 默认 Bash 3 环境下也能加载相位成本配置。
+- 如果系统没有安装 `numfmt`，成本面板现在会自动回退为原始数字显示，避免在 macOS 上因缺少 GNU coreutils 而报错。
+
 ### 2026-04-23 22:05
 
 - 已修复 `discover-skills.sh` 在 macOS Bash 3 下的自动发现链路，`discover`、`auto-designer`、`suggest` 现已恢复可用。
@@ -204,6 +222,8 @@ ls ~/.claude/skills/ai-office-landing/context/designer/
 - 使用 `--serial` 分摊到多天
 - 使用 `--human` 跳过 Critic
 - 启用成本节省模式: `export COST_SAVING_MODE=true`
+
+`cost-tracker.sh` 现在会优先恢复 `~/.claude/cost-history.json` 里的当天累计用量，并在缺少 `numfmt` 的环境中自动退回为纯数字输出，适合直接在 macOS 默认 shell 环境下查看成本面板。
 
 ## 扩展指南
 
