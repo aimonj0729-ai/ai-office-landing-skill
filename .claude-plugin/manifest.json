@@ -9,7 +9,7 @@
     "claude-version": ">=0.5.0",
     "platform": ["darwin", "linux"],
     "dependencies": {
-      "bash": ">=4.0",
+      "bash": ">=3.2",
       "jq": ">=1.6",
       "node": ">=16.0"
     }

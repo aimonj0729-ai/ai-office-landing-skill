@@ -41,8 +41,8 @@ check_requirements() {
     log "检查系统要求..."
 
     # Check bash version
-    if [[ "${BASH_VERSINFO[0]}" -lt 4 ]]; then
-        error "需要 Bash 4.0+，当前版本: ${BASH_VERSION}"
+    if [[ "${BASH_VERSINFO[0]}" -lt 3 ]] || [[ "${BASH_VERSINFO[0]}" -eq 3 && "${BASH_VERSINFO[1]}" -lt 2 ]]; then
+        error "需要 Bash 3.2+，当前版本: ${BASH_VERSION}"
     fi
 
     # Check jq

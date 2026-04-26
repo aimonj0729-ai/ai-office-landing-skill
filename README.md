@@ -35,6 +35,31 @@
 
 <!-- github-autopilot:updates:start -->
 
+### 2026-04-26 09:42
+
+**改动**
+- [orchestrator.sh](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/orchestrator.sh:9>) 现在会自行定位 `SKILL_ROOT`，并把 `check_execution_status()` 里的 Bash 4 关联数组改成 Bash 3.2 可用的普通数组；同时补了稳定的计数 helper 和安全的状态键写入，避免直接运行 Phase 3.5 时在 macOS 默认 `/bin/bash` 下报错。
+- [install.sh](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/install.sh:40>) 和 [.claude-plugin/manifest.json](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/.claude-plugin/manifest.json:8>) 的 Bash 要求已从 `4.0+` 同步下调到 `3.2+`，和当前脚本能力保持一致。
+- [README.md](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:38>)、[README.md](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:94>) 和 [CHANGELOG.md](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md:7>) 已同步写明这次兼容性修复。
+
+**验证**
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- macOS `/bin/bash 3.2` smoke test：在临时目录直接执行仓库里的 `orchestrator.sh`，成功生成 `ai-office/outputs/orchestrator-summary.md`
+
+未提交，也未推送。
+
+### 2026-04-26 09:58
+
+这次只做了一项高置信度改进：补齐了 `orchestrator.sh` 的 macOS 默认 Bash 兼容性。脚本原先还残留 `declare -A` 和对外部 `SKILL_ROOT` 的隐式依赖，导致 README 里这种直接运行方式在 macOS `/bin/bash 3.2` 下并不稳。现在 `orchestrator.sh` 会自行定位 skill 根目录，并改用 Bash 3 兼容的数据结构；`install.sh` 和 `.claude-plugin/manifest.json` 里的 Bash 要求也同步从 `4.0+` 下调到 `3.2+`。
+
+README 和变更记录已经同步更新；此外在快速开始下方补了一条环境说明，明确 `install.sh`、`discover-skills.sh`、`orchestrator.sh` 和 `cost-tracker.sh` 现在都可以直接跑在 macOS 默认 Bash 3.2 上，不再要求额外安装 Homebrew Bash。
+
+已运行验证：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- macOS `/bin/bash 3.2` smoke test：在临时目录里直接执行仓库里的 `orchestrator.sh`，成功生成 `ai-office/outputs/orchestrator-summary.md`
+
+未提交，也未推送。
+
 ### 2026-04-25 11:14
 
 这次只做了一项高置信度改进：修复了成本追踪脚本的初始化与历史恢复链路。核心改动在 [cost-tracker.sh](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/cost-tracker.sh:41>)、[cost-tracker.sh](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/cost-tracker.sh:120>) 和 [cost-tracker.sh](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/cost-tracker.sh:435>)。原脚本会把 `total_token_limit` 变量名写错、从错误的数据文件读当前用量、写回日期键时 `jq` 表达式不稳，还依赖 Bash 4 关联数组和 `numfmt`。现在它会正确从 `~/.claude/cost-history.json` 恢复当天累计用量，改为兼容 macOS 默认 Bash 3 的相位成本实现，并在没有 `numfmt` 时自动回退到纯数字显示。
@@ -78,6 +103,8 @@ export KIMI_API_KEY="your-key"
 export DEEPSEEK_API_KEY="your-key"
 /landing --cost-saving
 ```
+
+核心脚本 `install.sh`、`discover-skills.sh`、`orchestrator.sh` 和 `cost-tracker.sh` 现在都兼容 macOS 默认的 `/bin/bash 3.2`，不需要额外安装 Bash 4 才能完成安装和 Phase 3.5 汇总。
 
 ## 增强特性
 

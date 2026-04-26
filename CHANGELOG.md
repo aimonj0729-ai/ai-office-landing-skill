@@ -9,6 +9,8 @@ All notable changes to AI Office Landing Skill will be documented in this file.
 - Skill discovery now deduplicates matches and skips the current `ai-office-landing` skill during Designer auto-discovery
 - Fixed `cost-tracker.sh` initialization so it restores the current day's usage from `~/.claude/cost-history.json`
 - Removed the Bash 4-only phase cost map from `cost-tracker.sh` and added a `numfmt` fallback for macOS environments without GNU coreutils
+- Reworked `orchestrator.sh` to auto-detect `SKILL_ROOT` and avoid Bash 4 associative arrays, so the script can run under macOS's default Bash 3.2
+- Lowered the documented installer/runtime Bash requirement from `4.0` to `3.2` in `install.sh` and `.claude-plugin/manifest.json`
 
 ## [2.4.0] - 2026-04-12
 

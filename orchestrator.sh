@@ -6,6 +6,12 @@
 
 set -e
 
+# Auto-detect SKILL_ROOT if not set so the orchestrator can be invoked
+# directly from the installed skill path.
+if [[ -z "$SKILL_ROOT" ]]; then
+    SKILL_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+fi
+
 # Color codes
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -46,6 +52,19 @@ line_count() {
     wc -l < "$file" 2>/dev/null || echo 0
 }
 
+# Count grep matches without emitting duplicate zeroes when grep exits 1.
+grep_count() {
+    local pattern="$1"
+    local file="$2"
+    local count=0
+
+    if [[ -f "$file" ]]; then
+        count=$(grep -c "$pattern" "$file" 2>/dev/null || true)
+    fi
+
+    printf '%s\n' "${count:-0}"
+}
+
 # Extract section from markdown
 extract_section() {
     local file="$1"
@@ -64,7 +83,7 @@ has_content() {
 count_occurrences() {
     local file="$1"
     local pattern="$2"
-    grep -c "$pattern" "$file" 2>/dev/null || echo 0
+    grep_count "$pattern" "$file"
 }
 
 #=====================================
@@ -77,18 +96,21 @@ check_execution_status() {
 
     local outputs_dir="ai-office/outputs"
     local statuses=()
-
-    # Define expected files
-    declare -A expected_files=(
-        ["copy.md"]="Copywriter"
-        ["design-spec.md"]="Designer"
-        ["index.html"]="Frontend"
-        ["meta.md"]="SEO"
+    local expected_outputs=(
+        "copy.md:Copywriter"
+        "design-spec.md:Designer"
+        "index.html:Frontend"
+        "meta.md:SEO"
     )
+    local entry=""
+    local file=""
+    local agent=""
+    local path=""
 
-    for file in "${!expected_files[@]}"; do
-        local agent="${expected_files[$file]}"
-        local path="${outputs_dir}/${file}"
+    for entry in "${expected_outputs[@]}"; do
+        file="${entry%%:*}"
+        agent="${entry#*:}"
+        path="${outputs_dir}/${file}"
 
         if [[ -f "$path" ]]; then
             local size=$(file_size "$path")
@@ -209,7 +231,7 @@ check_headline_match() {
 # Count FAQ entries
 count_faq() {
     local file="$1"
-    grep -c "^###" "$file" 2>/dev/null || echo 0
+    grep_count "^###" "$file"
 }
 
 # Check if file has FAQ section
@@ -376,8 +398,8 @@ identify_conflicts() {
 
     # Check for section count mismatch
     if [[ -f "$outputs_dir/copy.md" && -f "$outputs_dir/design-spec.md" ]]; then
-        local copy_sections=$(grep -c "^## " "$outputs_dir/copy.md" || echo 0)
-        local design_sections=$(grep -c "^## " "$outputs_dir/design-spec.md" || echo 0)
+        local copy_sections=$(grep_count "^## " "$outputs_dir/copy.md")
+        local design_sections=$(grep_count "^## " "$outputs_dir/design-spec.md")
 
         if [[ $copy_sections -ne $design_sections ]]; then
             echo "**章节数量不匹配**"
@@ -441,12 +463,12 @@ generate_metrics() {
 **内容指标:**
 - Total word count: $(grep -oE "\w+" "$copy_file" 2>/dev/null | wc -l || echo 0)
 - Unique keywords: $(grep -oE "\w{4,}" "$copy_file" 2>/dev/null | sort -u | wc -l || echo 0)
-- Sections: $(grep -c "^## " "$copy_file" 2>/dev/null || echo 0)
+- Sections: $(grep_count "^## " "$copy_file")
 
 **代码指标:**
 - Lines of code: $(wc -l < "$html_file" 2>/dev/null || echo 0)
 - File size: $(wc -c < "$html_file" 2>/dev/null || echo 0) bytes
-- Components: $(grep -c "class=" "$html_file" 2>/dev/null || echo 0)
+- Components: $(grep_count "class=" "$html_file")
 
 **性能估算:**
 - Page weight: $(wc -c < "$html_file" 2>/dev/null || echo 0) bytes (without images)
@@ -586,7 +608,7 @@ should_proceed_to_phase_4() {
 # Save state for Phase 3.5
 save_orchestrator_state() {
     write_state "orchestrator_summary_generated" "true"
-    write_state "outputs_status.orchestrator-summary" "completed"
+    write_state "outputs_status.orchestrator_summary" "completed"
 
     # Record metrics
     if [[ -f "ai-office/outputs/orchestrator-summary.md" ]]; then
