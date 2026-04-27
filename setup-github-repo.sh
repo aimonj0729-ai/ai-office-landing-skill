@@ -1,9 +1,15 @@
 #!/bin/bash
 #
-# GitHub Repository Setup Script for AI Office Landing v2.3
+# GitHub Repository Setup Script for AI Office Landing
 #
 
-echo "📦 准备发布 AI Office Landing v2.3 到 GitHub"
+CURRENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MANIFEST_PATH="${CURRENT_DIR}/.claude-plugin/manifest.json"
+SKILL_VERSION="$(sed -n 's/^[[:space:]]*"version":[[:space:]]*"\([^"]*\)".*/\1/p' "$MANIFEST_PATH" | head -n 1)"
+SKILL_VERSION="${SKILL_VERSION:-2.4.0}"
+SKILL_SHORT_VERSION="${SKILL_VERSION%.*}"
+
+echo "📦 准备发布 AI Office Landing v${SKILL_SHORT_VERSION} 到 GitHub"
 echo ""
 
 # Check if gh is installed
@@ -74,7 +80,7 @@ echo "   3. 在 README 中添加使用示例"
 echo ""
 echo "📖 安装和使用说明:"
 echo ""
-cat << 'EOF'
+cat <<'EOF' | sed "s/__SKILL_SHORT_VERSION__/${SKILL_SHORT_VERSION}/g"
 ## Installation
 
 ### Option 1: Direct Download
@@ -117,7 +123,7 @@ claude
 
 ## Features
 
-✨ **v2.3 New Features:**
+✨ **Current Workflow Features (v__SKILL_SHORT_VERSION__):**
 - Phase 3.5 Orchestrator - Automatic work integration
 - Dynamic skill discovery - Designer auto-finds relevant skills
 - Cross-agent consistency checks

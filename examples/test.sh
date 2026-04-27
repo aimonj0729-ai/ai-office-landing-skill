@@ -1,8 +1,13 @@
 #!/bin/bash
-echo "AI Office Landing v2.3.0 - 安装验证"
+CURRENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+MANIFEST_PATH="${CURRENT_DIR}/.claude-plugin/manifest.json"
+SKILL_VERSION="$(sed -n 's/^[[:space:]]*"version":[[:space:]]*"\([^"]*\)".*/\1/p' "$MANIFEST_PATH" | head -n 1)"
+SKILL_VERSION="${SKILL_VERSION:-unknown}"
+
+echo "AI Office Landing v${SKILL_VERSION} - 安装验证"
 echo ""
 echo "✓ Skill 已安装到: ~/.claude/skills/ai-office-landing"
-echo "✓ 版本: v2.3.0"
+echo "✓ 版本: v${SKILL_VERSION}"
 echo "✓ 核心组件:"
 echo "  - orchestrator.sh (Phase 3.5 工作集成)"
 echo "  - discover-skills.sh (动态 Skill 发现)"

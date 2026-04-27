@@ -35,6 +35,36 @@
 
 <!-- github-autopilot:updates:start -->
 
+### 2026-04-27 09:43
+
+修了一项高置信度的小问题：仓库首页已经声明 `v2.4.0`，但插件 manifest、安装脚本和几个对外脚本还在显示或校验 `v2.3`，会让安装结果、帮助输出和发布文案互相矛盾。
+
+- [.claude-plugin/manifest.json](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/.claude-plugin/manifest.json:3) 已同步到 `2.4.0`，并补了 `2.4.0` 的 manifest 内部变更说明。
+- [install.sh](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/install.sh:40) 现在从 manifest 读取版本，安装提示、安装校验和生成的示例工作流不再硬编码旧版本。
+- [discover-skills.sh](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/discover-skills.sh:14) 的帮助输出和 `info` 子命令改为读取 manifest 元数据；[setup-github-repo.sh](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/setup-github-repo.sh:6) 与 [examples/test.sh](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/examples/test.sh:2) 也同步到了当前版本。
+- [README.md](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:38) 和 [CHANGELOG.md](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md:8) 已记录这次修复。
+
+已运行验证：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- `./discover-skills.sh help`
+- `bash examples/test.sh`
+- 安装态 smoke test：复制仓库到临时 `~/.claude/skills` 风格目录后执行 `discover-skills.sh info ai-office-landing`，已正确输出 `Version: 2.4.0` 和描述
+
+未提交，未推送。
+
+### 2026-04-27 10:18
+
+这次只做了一项高置信度改进：把插件版本元数据重新收口到 `.claude-plugin/manifest.json`，并同步修正所有对外脚本里的旧 `v2.3` 文案。此前 `README` 已经写成 `v2.4.0`，但 `manifest`、`install.sh`、`discover-skills.sh`、`setup-github-repo.sh` 和 [examples/test.sh](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/examples/test.sh:1>) 仍会显示 `v2.3`，`install.sh` 还会用旧版本号做安装校验，容易让用户误判当前安装内容。
+
+现在 `.claude-plugin/manifest.json` 已更新到 `2.4.0`，`install.sh` 和发布/示例脚本会直接从 manifest 读取版本，避免后续继续漂移；另外 `discover-skills.sh info` 也改为从 manifest 读取 `version` 和 `description`，不再依赖旧的错误解析方式。
+
+已运行验证：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- `./discover-skills.sh help`
+- `bash examples/test.sh`
+
+未提交，也未推送。
+
 ### 2026-04-26 09:42
 
 **改动**

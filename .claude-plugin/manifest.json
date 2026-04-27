@@ -1,6 +1,6 @@
 {
   "name": "ai-office-landing",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "description": "AI-powered landing page generator with multi-agent orchestration, cost tracking, and dynamic skill discovery",
   "author": "Claude Code User",
   "license": "MIT",
@@ -53,6 +53,7 @@
     "checkpoint-recovery": true
   },
   "changelog": {
+    "2.4.0": "新增多模型 Adapter 路由与成本节省模式",
     "2.3.0": "新增 Phase 3.5 Orchestrator 和动态 Skill 发现",
     "2.2.0": "添加成本追踪和基准分析",
     "2.0.0": "对话式交互升级",

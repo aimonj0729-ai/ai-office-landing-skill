@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# AI Office - Skill Discovery Utility (v2.3)
+# AI Office - Skill Discovery Utility
 # Dynamically discovers and loads relevant skills for Agents
 #
 
@@ -10,6 +10,21 @@ set -e
 if [[ -z "$SKILL_ROOT" ]]; then
     SKILL_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 fi
+
+read_manifest_field() {
+    local manifest_path="$1"
+    local field_name="$2"
+
+    if [[ ! -f "$manifest_path" ]]; then
+        return 0
+    fi
+
+    sed -n "s/^[[:space:]]*\"${field_name}\":[[:space:]]*\"\\([^\"]*\\)\".*/\\1/p" "$manifest_path" | head -n 1
+}
+
+DISCOVERY_MANIFEST="${SKILL_ROOT}/.claude-plugin/manifest.json"
+DISCOVERY_VERSION="$(read_manifest_field "$DISCOVERY_MANIFEST" "version")"
+DISCOVERY_VERSION="${DISCOVERY_VERSION:-unknown}"
 
 # Color codes
 BLUE='\033[0;34m'
@@ -120,8 +135,21 @@ get_skill_info() {
     fi
 
     local skill_dir=$(dirname "$skill_path")
-    local description=$(grep "^description:" "$skill_dir/.claude-plugin/manifest.json" 2>/dev/null | cut -d'"' -f4 || echo "No description")
-    local version=$(grep "^version:" "$skill_dir/.claude-plugin/manifest.json" 2>/dev/null | cut -d'"' -f4 || echo "Unknown")
+    local manifest_path="$skill_dir/.claude-plugin/manifest.json"
+    local description="No description"
+    local version="Unknown"
+    local parsed_description=""
+    local parsed_version=""
+
+    parsed_description=$(read_manifest_field "$manifest_path" "description")
+    parsed_version=$(read_manifest_field "$manifest_path" "version")
+
+    if [[ -n "$parsed_description" ]]; then
+        description="$parsed_description"
+    fi
+    if [[ -n "$parsed_version" ]]; then
+        version="$parsed_version"
+    fi
 
     echo "Skill: $skill_name"
     echo "Version: $version"
@@ -373,7 +401,7 @@ run_skill_discovery() {
             cache_skill_registry
             ;;
         help|*)
-            echo "Skill Discovery Utility v2.3"
+            echo "Skill Discovery Utility v${DISCOVERY_VERSION}"
             echo ""
             echo "Usage: $0 <command> [options]"
             echo ""

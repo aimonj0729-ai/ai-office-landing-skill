@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # AI Office Landing Skill - Installation Script
-# Version: 2.3.0
+# Version: follows .claude-plugin/manifest.json
 #
 
 set -e
@@ -17,6 +17,7 @@ NC='\033[0m'
 SKILL_NAME="ai-office-landing"
 INSTALL_DIR="${HOME}/.claude/skills/${SKILL_NAME}"
 CURRENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MANIFEST_PATH="${CURRENT_DIR}/.claude-plugin/manifest.json"
 
 # Logging
 log() {
@@ -35,6 +36,24 @@ error() {
     echo -e "${RED}✗${NC} $1"
     exit 1
 }
+
+read_manifest_version() {
+    if [[ ! -f "$MANIFEST_PATH" ]]; then
+        error "缺少 manifest.json: ${MANIFEST_PATH}"
+    fi
+
+    local version
+    version=$(sed -n 's/^[[:space:]]*"version":[[:space:]]*"\([^"]*\)".*/\1/p' "$MANIFEST_PATH" | head -n 1)
+
+    if [[ -z "$version" ]]; then
+        error "无法从 manifest.json 读取版本号"
+    fi
+
+    echo "$version"
+}
+
+SKILL_VERSION="$(read_manifest_version)"
+SKILL_SHORT_VERSION="${SKILL_VERSION%.*}"
 
 # Check requirements
 check_requirements() {
@@ -88,7 +107,7 @@ check_existing() {
 
 # Install the skill
 install_skill() {
-    log "安装 ${SKILL_NAME} v2.3.0..."
+    log "安装 ${SKILL_NAME} v${SKILL_VERSION}..."
 
     # Create directories
     mkdir -p "${INSTALL_DIR}"
@@ -152,8 +171,8 @@ verify_installation() {
 
     # Verify version
     INSTALLED_VERSION=$(jq -r '.version' "${INSTALL_DIR}/.claude-plugin/manifest.json")
-    if [[ "$INSTALLED_VERSION" != "2.3.0" ]]; then
-        warn "版本不匹配: 期望 2.3.0, 实际 ${INSTALLED_VERSION}"
+    if [[ "$INSTALLED_VERSION" != "$SKILL_VERSION" ]]; then
+        warn "版本不匹配: 期望 ${SKILL_VERSION}, 实际 ${INSTALLED_VERSION}"
     fi
 
     success "安装验证通过"
@@ -197,13 +216,13 @@ create_example() {
     EXAMPLE_DIR="${INSTALL_DIR}/examples"
     mkdir -p "$EXAMPLE_DIR"
 
-    cat > "${EXAMPLE_DIR}/workflow-demo.sh" << 'EOF'
+    cat > "${EXAMPLE_DIR}/workflow-demo.sh" <<EOF
 #!/bin/bash
 #
 # AI Office Landing - 示例工作流
 #
 
-echo "🚀 AI Office Landing v2.3 - 示例工作流"
+echo "🚀 AI Office Landing v${SKILL_SHORT_VERSION} - 示例工作流"
 echo ""
 echo "1. 启动工作流:"
 echo "   /landing"
@@ -220,7 +239,7 @@ echo ""
 echo "5. Orchestrator 汇总:"
 echo "   ~/.claude/skills/ai-office-landing/orchestrator.sh"
 echo ""
-echo "✨ v2.3 新增:"
+echo "✨ 当前工作流特性:"
 echo "   - Phase 3.5 Orchestrator 自动汇总"
 echo "   - 动态 Skill 发现（Designer 自动）"
 echo "   - 跨 Agent 一致性检查"
@@ -236,7 +255,7 @@ print_success() {
     log "安装完成！"
     echo ""
     echo -e "${GREEN}╔═══════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${GREEN}║            AI Office Landing v2.3.0 安装成功！           ║${NC}"
+    echo -e "${GREEN}║            AI Office Landing v${SKILL_VERSION} 安装成功！           ║${NC}"
     echo -e "${GREEN}╠═══════════════════════════════════════════════════════════╣${NC}"
     echo -e "${GREEN}║                                                           ║${NC}"
     echo -e "${GREEN}║  📁 安装路径: ${INSTALL_DIR}                               ║${NC}"
@@ -244,7 +263,7 @@ print_success() {
     echo -e "${GREEN}║  🎯 快速开始: /landing                                     ║${NC}"
     echo -e "${GREEN}║                                                           ║${NC}"
     echo -e "${GREEN}╠═══════════════════════════════════════════════════════════╣${NC}"
-    echo -e "${GREEN}║  新增 v2.3 特性:                                          ║${NC}"
+    echo -e "${GREEN}║  当前工作流特性:                                          ║${NC}"
     echo -e "${GREEN}║  ✓ Phase 3.5 Orchestrator - 自动工作汇总                  ║${NC}"
     echo -e "${GREEN}║  ✓ 动态 Skill 发现 - Designer 自动查找相关技能           ║${NC}"
     echo -e "${GREEN}║  ✓ 跨 Agent 一致性检查 - 自动识别冲突和缺口              ║${NC}"
@@ -274,7 +293,7 @@ print_usage() {
 
 # Main installation
 main() {
-    log "AI Office Landing v2.3.0 安装程序"
+    log "AI Office Landing v${SKILL_VERSION} 安装程序"
     log "=================================="
     echo ""
 
@@ -294,7 +313,7 @@ main() {
     print_success
     print_usage
 
-    log "享受 v2.3！"
+    log "享受 v${SKILL_SHORT_VERSION}！"
 }
 
 # Handle command line arguments
