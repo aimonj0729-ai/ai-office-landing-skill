@@ -35,6 +35,35 @@
 
 <!-- github-autopilot:updates:start -->
 
+### 2026-04-28 16:18
+
+**改动**
+
+修了一个高置信度的脚本稳定性问题：`discover-skills.sh` 和 `orchestrator.sh` 之前每次运行都会直接调用 `init_state`，会把已有的 `ai-office/state.json` 重置掉，等于破坏 `--resume` 场景。现在我在 [state-management.sh](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/state-management.sh:209) 加了 `ensure_state_initialized()`，只有状态文件不存在时才初始化；[discover-skills.sh](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/discover-skills.sh:371) 和 [orchestrator.sh](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/orchestrator.sh:631) 已改为走这个非破坏性入口。
+
+README 和变更记录也同步了这次修复，用户现在能直接在 [README.md](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:38)、[README.md](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:151) 和 [CHANGELOG.md](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md:5) 看到这次“保留已有 state.json”的说明。
+
+**验证**
+
+- 运行了 `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- 做了状态保护 smoke test：预先写入 `current_phase=3` 和 checkpoint `keep-me`，执行 `bash ./discover-skills.sh help` 后，`state.json` 仍保持 `3 / keep-me`，没有被重置
+
+未提交，未推送。
+
+### 2026-04-28 16:16
+
+这次只做了一项脚本稳定性修复：`discover-skills.sh` 和 `orchestrator.sh` 之前每次启动都会直接调用 `init_state`，导致已有的 `ai-office/state.json` 被重新初始化。只要用户在进行中的项目里跑一次技能发现或 Phase 3.5 汇总，`current_phase`、checkpoint 和输出状态就会被重置，这和 README 里声明的 `--resume`/状态恢复行为冲突。
+
+- [state-management.sh](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/state-management.sh:173) 新增 `ensure_state_initialized()`，只有在 `ai-office/state.json` 不存在时才初始化状态。
+- [discover-skills.sh](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/discover-skills.sh:378) 和 [orchestrator.sh](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/orchestrator.sh:635) 已切换到非破坏性的状态引导，不会再覆盖现有会话。
+- [README.md](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:142) 与 [CHANGELOG.md](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md:7) 已记录这次修复。
+
+已运行验证：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- 状态保护 smoke test：预先写入 `current_phase=3` 和自定义 checkpoint 后运行 `discover-skills.sh help`，确认 `state.json` 未被重置
+
+未提交，未推送。
+
 ### 2026-04-27 09:43
 
 修了一项高置信度的小问题：仓库首页已经声明 `v2.4.0`，但插件 manifest、安装脚本和几个对外脚本还在显示或校验 `v2.3`，会让安装结果、帮助输出和发布文案互相矛盾。
@@ -135,6 +164,8 @@ export DEEPSEEK_API_KEY="your-key"
 ```
 
 核心脚本 `install.sh`、`discover-skills.sh`、`orchestrator.sh` 和 `cost-tracker.sh` 现在都兼容 macOS 默认的 `/bin/bash 3.2`，不需要额外安装 Bash 4 才能完成安装和 Phase 3.5 汇总。
+
+`discover-skills.sh` 和 `orchestrator.sh` 现在只会在缺少 `ai-office/state.json` 时初始化状态；如果你正在用 `--resume` 继续一个进行中的项目，再次运行这些辅助脚本也不会把当前 phase、checkpoint 和输出状态清空。
 
 ## 增强特性
 

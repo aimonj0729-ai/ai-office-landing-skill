@@ -206,6 +206,17 @@ EOF
     log_success "Initialized state.json for project: $project_name (v2.1 with Phase 0)"
 }
 
+# Initialize state only when the session file does not already exist.
+ensure_state_initialized() {
+    local project_name="${1:-$(basename "$PWD")}"
+
+    if [[ -f "ai-office/state.json" ]]; then
+        return 0
+    fi
+
+    init_state "$project_name"
+}
+
 # Check if there are pending questions
 has_pending_questions() {
     local count=$(read_state "pending_questions" "[]" | jq 'length')

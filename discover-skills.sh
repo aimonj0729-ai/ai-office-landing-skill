@@ -374,8 +374,8 @@ run_skill_discovery() {
     # Set up environment
     source "$SKILL_ROOT/state-management.sh"
 
-    # Initialize if needed
-    init_state
+    # Initialize state only when this is the first command in a workflow.
+    ensure_state_initialized
 
     case "$command" in
         discover)

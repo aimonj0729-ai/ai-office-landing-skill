@@ -631,8 +631,8 @@ run_orchestrator() {
     # Set up environment
     source "$SKILL_ROOT/state-management.sh"
 
-    # Initialize if needed
-    init_state
+    # Initialize state only when this run starts from a fresh workspace.
+    ensure_state_initialized
 
     # Record start time
     local START_TIME=$(date +%s)

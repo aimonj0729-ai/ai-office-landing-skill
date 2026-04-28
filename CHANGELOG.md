@@ -5,6 +5,7 @@ All notable changes to AI Office Landing Skill will be documented in this file.
 ## [Unreleased]
 
 ### Fixed
+- Prevented `discover-skills.sh` and `orchestrator.sh` from resetting an existing `ai-office/state.json`; they now initialize workflow state only when the file is missing
 - Synced the plugin manifest and user-facing shell script version output to `2.4.0`, so install/release/discovery helpers no longer report stale `v2.3` metadata
 - Updated `discover-skills.sh info` to read description/version from `manifest.json` instead of stale hardcoded parsing
 - Repaired `discover-skills.sh` so `auto-designer` and `suggest` run again after a broken shell fragment was introduced
