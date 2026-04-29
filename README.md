@@ -35,6 +35,33 @@
 
 <!-- github-autopilot:updates:start -->
 
+### 2026-04-29 09:42
+
+实现了一项高置信度的安装体验改进：[`install.sh`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/install.sh>) 现在支持 `--force` / `--yes` / `-y`，在已有 `~/.claude/skills/ai-office-landing` 安装时可以无交互覆盖安装；如果在非交互终端里重复安装但没传 `--force`，脚本会直接报错并提示正确命令，不再卡在 `read -p`。这类场景主要对应 CI、脚本化更新和无人值守重装。`reinstall` 也同步走了无交互路径。
+
+README 和文档已同步更新：[`README.md`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md>) 记录了本次更新并补了无人值守安装说明，[`CHANGELOG.md`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md>) 加了 `Unreleased` 条目，[`CONTRIBUTING.md`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CONTRIBUTING.md>) 也补了重复安装时的推荐命令。
+
+验证已运行：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- `./install.sh --help`
+- 临时 `HOME` 的安装 smoke test：首次 `./install.sh install` 成功；第二次无参数安装在非交互模式下按预期失败并提示 `--force`；随后 `./install.sh install --force` 成功完成覆盖安装
+
+未提交，未推送。
+
+### 2026-04-29 09:40
+
+这次补了一项安装体验改进：`install.sh` 现在支持 `--force` / `--yes`，可以在已有安装目录时跳过交互确认，适合 CI、脚本化更新和其他无人值守场景。之前如果 `~/.claude/skills/ai-office-landing` 已存在，脚本一定会等待 `read -p` 输入；在非交互终端里这既不稳定，也不利于自动化重装。
+
+- [install.sh](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/install.sh) 现在支持 `./install.sh install --force`、`./install.sh install --yes` 和 `./install.sh -y`。
+- 如果检测到非交互终端且目标目录已存在，但没有传 `--force`，脚本会立即报错并提示正确命令，而不是卡在覆盖确认上。
+- [README.md](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md)、[CHANGELOG.md](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md) 和 [CONTRIBUTING.md](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CONTRIBUTING.md) 已同步更新这次无交互安装说明。
+
+已运行验证：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- 临时 `HOME` 安装 smoke test：首次 `./install.sh install` 成功；第二次无参数安装在非交互模式下按预期失败并提示 `--force`；随后 `./install.sh install --force` 成功完成覆盖安装
+
+未提交，未推送。
+
 ### 2026-04-28 16:18
 
 **改动**
@@ -166,6 +193,8 @@ export DEEPSEEK_API_KEY="your-key"
 核心脚本 `install.sh`、`discover-skills.sh`、`orchestrator.sh` 和 `cost-tracker.sh` 现在都兼容 macOS 默认的 `/bin/bash 3.2`，不需要额外安装 Bash 4 才能完成安装和 Phase 3.5 汇总。
 
 `discover-skills.sh` 和 `orchestrator.sh` 现在只会在缺少 `ai-office/state.json` 时初始化状态；如果你正在用 `--resume` 继续一个进行中的项目，再次运行这些辅助脚本也不会把当前 phase、checkpoint 和输出状态清空。
+
+如果你在 CI、自动化脚本或其他无人值守环境里重复安装这个 skill，直接运行 `./install.sh install --force` 即可跳过覆盖确认；如果目标目录已存在但未传 `--force`，安装脚本会快速失败并提示正确用法，而不会卡在交互输入上。
 
 ## 增强特性
 

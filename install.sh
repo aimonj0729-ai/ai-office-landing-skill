@@ -18,6 +18,8 @@ SKILL_NAME="ai-office-landing"
 INSTALL_DIR="${HOME}/.claude/skills/${SKILL_NAME}"
 CURRENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MANIFEST_PATH="${CURRENT_DIR}/.claude-plugin/manifest.json"
+COMMAND="install"
+FORCE_INSTALL=false
 
 # Logging
 log() {
@@ -92,12 +94,18 @@ check_existing() {
             log "现有版本: v${EXISTING_VERSION}"
         fi
 
-        read -p "是否要覆盖安装? (y/n): " -n 1 -r
-        echo
+        if [[ "$FORCE_INSTALL" == "true" ]]; then
+            log "检测到 --force，跳过交互确认"
+        elif [[ ! -t 0 ]]; then
+            error "检测到非交互终端且 ${SKILL_NAME} 已存在。请重新运行: $0 install --force"
+        else
+            read -r -p "是否要覆盖安装? (y/n): " -n 1
+            echo
 
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            log "安装已取消"
-            exit 0
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                log "安装已取消"
+                exit 0
+            fi
         fi
 
         log "备份现有安装..."
@@ -291,6 +299,43 @@ print_usage() {
     echo ""
 }
 
+print_cli_help() {
+    echo "用法: $0 [install|uninstall|reinstall|check] [--force]"
+    echo ""
+    echo "命令:"
+    echo "  install     - 安装技能 (默认)"
+    echo "  uninstall   - 卸载技能"
+    echo "  reinstall   - 重新安装"
+    echo "  check       - 检查是否已安装"
+    echo ""
+    echo "选项:"
+    echo "  --force, --yes, -y  - 已存在安装时跳过交互确认并覆盖安装"
+    echo "  --help, -h          - 显示此帮助"
+}
+
+parse_args() {
+    if [[ $# -gt 0 && "$1" != -* ]]; then
+        COMMAND="$1"
+        shift
+    fi
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --force|--yes|-y)
+                FORCE_INSTALL=true
+                ;;
+            --help|-h)
+                print_cli_help
+                exit 0
+                ;;
+            *)
+                error "未知参数: $1"
+                ;;
+        esac
+        shift
+    done
+}
+
 # Main installation
 main() {
     log "AI Office Landing v${SKILL_VERSION} 安装程序"
@@ -317,7 +362,9 @@ main() {
 }
 
 # Handle command line arguments
-case "${1:-install}" in
+parse_args "$@"
+
+case "$COMMAND" in
     install)
         main
         ;;
@@ -333,7 +380,7 @@ case "${1:-install}" in
     reinstall)
         "$0" uninstall
         sleep 1
-        "$0" install
+        "$0" install --force
         ;;
     check)
         if [[ -d "$INSTALL_DIR" ]]; then
@@ -344,13 +391,7 @@ case "${1:-install}" in
         fi
         ;;
     *)
-        echo "用法: $0 {install|uninstall|reinstall|check}"
-        echo ""
-        echo "命令:"
-        echo "  install     - 安装技能 (默认)"
-        echo "  uninstall   - 卸载技能"
-        echo "  reinstall   - 重新安装 (覆盖更新)"
-        echo "  check       - 检查是否已安装"
+        print_cli_help
         exit 1
         ;;
 esac

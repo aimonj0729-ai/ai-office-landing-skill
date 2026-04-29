@@ -15,6 +15,7 @@ Thank you for your interest in contributing to AI Office Landing! This document 
    ```bash
    ./install.sh install
    ```
+   For unattended or repeat local installs, use `./install.sh install --force` to skip the overwrite prompt.
 
 4. **Test the skill**:
    ```bash

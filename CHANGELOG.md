@@ -4,6 +4,9 @@ All notable changes to AI Office Landing Skill will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+- `install.sh` now accepts `--force` / `--yes` / `-y` for unattended reinstall flows, and it fails fast with guidance instead of waiting for interactive input when a previous install already exists
+
 ### Fixed
 - Prevented `discover-skills.sh` and `orchestrator.sh` from resetting an existing `ai-office/state.json`; they now initialize workflow state only when the file is missing
 - Synced the plugin manifest and user-facing shell script version output to `2.4.0`, so install/release/discovery helpers no longer report stale `v2.3` metadata
