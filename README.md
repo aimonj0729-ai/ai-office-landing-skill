@@ -35,6 +35,30 @@
 
 <!-- github-autopilot:updates:start -->
 
+### 2026-05-02 13:26
+
+在 [discover-skills.sh](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/discover-skills.sh:93) 我修了 `info/load` 的一个真实可靠性问题。脚本原来用 `find | xargs grep` 定位 skill，当前这类带空格的 checkout 路径里会把合法 skill 误判成不存在；`load` 还会把 `ai-office-landing` 这类带连字符的名字直接拼进 jq 路径，导致状态写入失败。现在已改成空格安全的 `find -print0` 查找，并用 jq 安全键写入状态，[`discover-skills.sh`](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/discover-skills.sh:228)。README 和变更记录也同步更新到了 [`README.md`](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:38)、[`README.md`](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:239) 和 [`CHANGELOG.md`](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md:11)。
+
+验证已运行：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- `./discover-skills.sh info ai-office-landing`
+- `./discover-skills.sh load designer ai-office-landing`
+
+未提交，未推送。
+
+### 2026-05-02 13:35
+
+修了一项高置信度的脚本可靠性问题：[`discover-skills.sh`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/discover-skills.sh>) 之前在 `info` 和 `load` 子命令里使用 `find | xargs grep` 查找 skill，只要仓库或技能目录路径里带空格，就可能把合法 skill 误判成“不存在”；即便查找成功，`load` 在把 `ai-office-landing` 这类带连字符的 skill 名写回状态时，也会触发 jq 路径错误。当前自动化工作目录本身就带空格，这组问题可以稳定复现。
+
+现在脚本已改成基于 `find -print0` 的安全查找 helper，并在状态写入时对带连字符的 skill 名改用 jq 安全键访问。`discover-skills.sh info ai-office-landing` 和 `discover-skills.sh load designer ai-office-landing` 在包含空格的 checkout、临时目录和桌面同步目录里都能正常工作。[`CHANGELOG.md`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md>) 也已同步记录本次修复。
+
+验证已运行：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- `./discover-skills.sh info ai-office-landing`
+- `./discover-skills.sh load designer ai-office-landing`
+
+未提交，未推送。
+
 ### 2026-04-29 09:42
 
 实现了一项高置信度的安装体验改进：[`install.sh`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/install.sh>) 现在支持 `--force` / `--yes` / `-y`，在已有 `~/.claude/skills/ai-office-landing` 安装时可以无交互覆盖安装；如果在非交互终端里重复安装但没传 `--force`，脚本会直接报错并提示正确命令，不再卡在 `read -p`。这类场景主要对应 CI、脚本化更新和无人值守重装。`reinstall` 也同步走了无交互路径。
@@ -222,6 +246,8 @@ Designer Agent 可自动发现相关 skills：
 ```
 
 `auto-designer` 现在会自动去重候选项，并跳过当前 `ai-office-landing` skill 自身，避免把内置 skill 误当作外部参考重复加载。
+
+`discover-skills.sh info` 和 `load` 现在也支持 skill 根目录、工作树或临时 checkout 路径中包含空格的场景，并且不会再因为 `ai-office-landing` 这类带连字符的 skill 名在状态写入时失败。
 
 ### 3. 智能决策支持
 - **Skill 加载**: 自动将相关 skill 内容加载到 Agent 上下文

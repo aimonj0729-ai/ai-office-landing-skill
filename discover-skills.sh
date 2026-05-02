@@ -90,6 +90,25 @@ has_array_value() {
     return 1
 }
 
+# Resolve a skill directory by its NAME file without splitting paths that
+# contain spaces (common in temp checkouts or synced desktop folders).
+find_skill_dir_by_name() {
+    local target_skill="$1"
+    local skills_root="${SKILL_ROOT}/../"
+    local name_file=""
+    local candidate_skill=""
+
+    while IFS= read -r -d '' name_file; do
+        candidate_skill="$(tr -d '\r\n' < "$name_file")"
+        if [[ "$candidate_skill" == "$target_skill" ]]; then
+            dirname "$name_file"
+            return 0
+        fi
+    done < <(find "$skills_root" -maxdepth 2 -name "NAME" -type f -print0 2>/dev/null)
+
+    return 1
+}
+
 # Discover skills by keyword
 # Usage: discover_skills "keyword" "category"
 discover_skills() {
@@ -126,15 +145,15 @@ discover_skills() {
 # Usage: get_skill_info "skill-name"
 get_skill_info() {
     local skill_name="$1"
-    local skills_root="${SKILL_ROOT}/../"
-    local skill_path=$(find "$skills_root" -maxdepth 2 -name "NAME" -type f 2>/dev/null | xargs grep -l "^$skill_name$" 2>/dev/null || echo "")
+    local skill_dir=""
 
-    if [[ -z "$skill_path" ]]; then
+    skill_dir="$(find_skill_dir_by_name "$skill_name" || true)"
+
+    if [[ -z "$skill_dir" ]]; then
         log_error "Skill '$skill_name' 不存在"
         return 1
     fi
 
-    local skill_dir=$(dirname "$skill_path")
     local manifest_path="$skill_dir/.claude-plugin/manifest.json"
     local description="No description"
     local version="Unknown"
@@ -172,19 +191,16 @@ get_skill_info() {
 load_skill_for_agent() {
     local agent_name="$1"
     local skill_name="$2"
-    local skills_root="${SKILL_ROOT}/../"
+    local skill_dir=""
 
     log "为 $agent_name 加载 skill: $skill_name"
 
-    # Find skill directory
-    local skill_path=$(find "$skills_root" -maxdepth 2 -name "NAME" -type f 2>/dev/null | xargs grep -l "^$skill_name$" 2>/dev/null || echo "")
+    skill_dir="$(find_skill_dir_by_name "$skill_name" || true)"
 
-    if [[ -z "$skill_path" ]]; then
+    if [[ -z "$skill_dir" ]]; then
         log_error "Skill '$skill_name' 不存在"
         return 1
     fi
-
-    local skill_dir=$(dirname "$skill_path")
 
     # Copy relevant files to agent's context
     local agent_context_dir="${SKILL_ROOT}/context/${agent_name}"
@@ -209,7 +225,7 @@ load_skill_for_agent() {
     fi
 
     # Record in state
-    write_state "skills.loaded.${agent_name}.${skill_name}" "true"
+    write_state "skills.loaded.${agent_name}[\"${skill_name}\"]" "true"
 
     log_success "Skill '$skill_name' 已加载给 $agent_name"
     return 0
