@@ -34,7 +34,7 @@
       "state-management.sh"
     ],
     "prompts": [
-      "prompts/interviewer.md",
+      "interview.md",
       "prompts/copywriter.md",
       "prompts/designer.md",
       "prompts/frontend.md",

@@ -157,7 +157,7 @@ verify_installation() {
         "README.md"
         ".claude-plugin/manifest.json"
         ".claude-plugin/hooks.json"
-        "prompts/interviewer.md"
+        "interview.md"
         "prompts/designer.md"
         "prompts/orchestrator-summary.md"
         "cost-tracker.sh"

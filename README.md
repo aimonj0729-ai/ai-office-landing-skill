@@ -35,6 +35,28 @@
 
 <!-- github-autopilot:updates:start -->
 
+### 2026-05-03 09:41
+
+这次只做了一项高置信度修复：把安装链路里残留的旧 `prompts/interviewer.md` 引用，对齐到仓库当前实际使用的根目录 [interview.md](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/interview.md:1)。具体改动在 [.claude-plugin/manifest.json](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/.claude-plugin/manifest.json:37) 和 [install.sh](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/install.sh:160)，避免 `./install.sh install` 在复制完文件后因为检查一个不存在的旧路径而直接失败。README 和变更记录也已同步更新到 [README.md](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:38) 和 [CHANGELOG.md](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md:11)。
+
+验证已运行：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- 临时 `HOME` 安装 smoke test：`./install.sh install` 成功完成，退出码 `0`
+
+未提交，未推送。
+
+### 2026-05-03 10:05
+
+修了一项高置信度的安装链路问题：仓库当前实际把 Interview 阶段说明保存在根目录 [`interview.md`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/interview.md>)，但 `.claude-plugin/manifest.json` 和 [`install.sh`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/install.sh>) 的安装校验还残留旧的 `prompts/interviewer.md` 路径，导致 `./install.sh install` 在复制完文件后直接失败，用户拿到的是一个“缺少关键文件”的假错误。
+
+现在 manifest 已改为声明真实存在的 `interview.md`，安装校验也同步对齐当前目录结构；首次安装和临时 `HOME` 的 smoke test 都能顺利完成，不会再被这个过期路径拦住。[`CHANGELOG.md`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md>) 也已同步记录这次修复。
+
+验证已运行：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- 临时 `HOME` 安装 smoke test：`./install.sh install` 现在可完成安装，不再报 `缺少关键文件: prompts/interviewer.md`
+
+未提交，未推送。
+
 ### 2026-05-02 13:26
 
 在 [discover-skills.sh](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/discover-skills.sh:93) 我修了 `info/load` 的一个真实可靠性问题。脚本原来用 `find | xargs grep` 定位 skill，当前这类带空格的 checkout 路径里会把合法 skill 误判成不存在；`load` 还会把 `ai-office-landing` 这类带连字符的名字直接拼进 jq 路径，导致状态写入失败。现在已改成空格安全的 `find -print0` 查找，并用 jq 安全键写入状态，[`discover-skills.sh`](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/discover-skills.sh:228)。README 和变更记录也同步更新到了 [`README.md`](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:38)、[`README.md`](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:239) 和 [`CHANGELOG.md`](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md:11)。
