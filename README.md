@@ -35,6 +35,26 @@
 
 <!-- github-autopilot:updates:start -->
 
+### 2026-05-04 09:50
+
+修了一项高置信度的状态管理问题。`state-management.sh` 之前把任务名直接拼进 jq 路径，像 `design-references`、`brief.md` 这类真实键会被当成减号或层级访问处理，结果要么报错，要么写出错误的嵌套结构 `outputs_status.brief.md`。我在 [state-management.sh](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/state-management.sh:60>) 里加了按字面键读取的 helper，把对象字段更新改成 `jq --arg` 安全写法，并让完成状态检查和用户输入读取也走这条安全路径；同时去掉了旧字符串写入会附带换行的问题。README 和变更记录已同步到 [README.md](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:38>)、[CHANGELOG.md](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md:10>)。
+
+已运行验证。`bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh` 通过；另外做了临时目录 smoke test，结果是 `mark_task_completed "design-references"` 和 `mark_task_completed "brief.md"` 都能正确写回，`outputs_status` 不再出现错误的 `brief` 嵌套对象，`task_is_completed "brief.md"` 返回成功，带点号的用户输入键也能正常保存和读取（结果为 `Acme`）。
+
+未提交，未推送。
+
+### 2026-05-04 09:49
+
+这次只做了一项高置信度的状态管理修复：`state-management.sh` 之前直接把任务名拼进 jq 路径，像 `design-references`、`brief.md`、`style-tokens.md` 这类真实输出键会被误当成减号或层级访问处理。结果要么直接报错，要么把状态错误地写成 `outputs_status.brief.md` 这样的嵌套对象，导致完成标记和恢复判断都不可靠。
+
+现在对象字段读写已改成基于 `jq --arg` 的字面键访问，`mark_task_completed`、`task_is_completed` 和用户输入读取都会按真实键名工作；同时顺手去掉了旧字符串写入路径里会额外附带换行的问题。`README.md` 和 `CHANGELOG.md` 也已同步记录本次修复。
+
+验证已运行：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- 状态管理 smoke test：`mark_task_completed "design-references"` 现在可成功写回；`mark_task_completed "brief.md"` 不再生成错误的 `outputs_status.brief.md` 嵌套结构；`task_is_completed "brief.md"` 会按预期返回成功
+
+未提交，未推送。
+
 ### 2026-05-03 09:41
 
 这次只做了一项高置信度修复：把安装链路里残留的旧 `prompts/interviewer.md` 引用，对齐到仓库当前实际使用的根目录 [interview.md](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/interview.md:1)。具体改动在 [.claude-plugin/manifest.json](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/.claude-plugin/manifest.json:37) 和 [install.sh](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/install.sh:160)，避免 `./install.sh install` 在复制完文件后因为检查一个不存在的旧路径而直接失败。README 和变更记录也已同步更新到 [README.md](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:38) 和 [CHANGELOG.md](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md:11)。
@@ -239,6 +259,8 @@ export DEEPSEEK_API_KEY="your-key"
 核心脚本 `install.sh`、`discover-skills.sh`、`orchestrator.sh` 和 `cost-tracker.sh` 现在都兼容 macOS 默认的 `/bin/bash 3.2`，不需要额外安装 Bash 4 才能完成安装和 Phase 3.5 汇总。
 
 `discover-skills.sh` 和 `orchestrator.sh` 现在只会在缺少 `ai-office/state.json` 时初始化状态；如果你正在用 `--resume` 继续一个进行中的项目，再次运行这些辅助脚本也不会把当前 phase、checkpoint 和输出状态清空。
+
+`state-management.sh` 现在也会按字面键名读写 `outputs_status` 和 `user_inputs`；像 `design-references`、`brief.md` 这类带连字符或点号的真实任务 ID 不会再被误拆成 jq 路径，恢复和完成状态检查会反映真实任务状态。
 
 如果你在 CI、自动化脚本或其他无人值守环境里重复安装这个 skill，直接运行 `./install.sh install --force` 即可跳过覆盖确认；如果目标目录已存在但未传 `--force`，安装脚本会快速失败并提示正确用法，而不会卡在交互输入上。
 

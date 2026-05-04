@@ -57,6 +57,34 @@ read_state() {
     fi
 }
 
+# Read a field from a state object using a literal key name.
+# This keeps filenames like "brief.md" and IDs like "design-references"
+# from being misinterpreted as jq path syntax.
+read_state_object_field() {
+    local object_key="$1"
+    local field="$2"
+    local default_value="${3:-}"
+
+    if [[ ! -f "ai-office/state.json" ]]; then
+        echo "$default_value"
+        return
+    fi
+
+    local value
+    value=$(jq -r \
+        --arg object_key "$object_key" \
+        --arg field "$field" \
+        --arg default_value "$default_value" \
+        '.[$object_key][$field] // $default_value' \
+        ai-office/state.json 2>/dev/null)
+
+    if [[ -z "$value" ]]; then
+        echo "$default_value"
+    else
+        echo "$value"
+    fi
+}
+
 # Write state to ai-office/state.json
 # Usage: write_state "key" "value" [value_type]
 write_state() {
@@ -79,7 +107,7 @@ write_state() {
     local jq_value=""
     case "$value_type" in
         string)
-            jq_value=$(echo "$value" | jq -R -s .)
+            jq_value=$(printf '%s' "$value" | jq -R -s .)
             ;;
         number)
             jq_value="$value"
@@ -92,7 +120,7 @@ write_state() {
             jq_value="$value"
             ;;
         *)
-            jq_value=$(echo "$value" | jq -R -s .)
+            jq_value=$(printf '%s' "$value" | jq -R -s .)
             ;;
     esac
 
@@ -146,8 +174,12 @@ update_state_object() {
     fi
 
     # Update object field using jq
-    local escaped_value=$(echo "$value" | jq -R -s .)
-    jq ".$object_key.$field = $escaped_value" ai-office/state.json > ai-office/state.json.tmp
+    jq \
+        --arg object_key "$object_key" \
+        --arg field "$field" \
+        --arg value "$value" \
+        '.[$object_key] = (.[$object_key] // {}) | .[$object_key][$field] = $value' \
+        ai-office/state.json > ai-office/state.json.tmp
 
     if [[ $? -eq 0 ]]; then
         mv ai-office/state.json.tmp ai-office/state.json
@@ -382,7 +414,8 @@ display_state_summary() {
 # Check if a task is completed
 task_is_completed() {
     local task_name="$1"
-    local status=$(read_state "outputs_status.$task_name" "pending")
+    local status
+    status=$(read_state_object_field "outputs_status" "$task_name" "pending")
     [[ "$status" == "completed" || "$status" == "completed_confirmed" ]]
 }
 
@@ -395,7 +428,7 @@ mark_task_waiting_for_user() {
 # Get user input from state
 get_user_input() {
     local key="$1"
-    read_state "user_inputs.$key" ""
+    read_state_object_field "user_inputs" "$key" ""
 }
 
 # Save user input to state

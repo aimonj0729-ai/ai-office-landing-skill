@@ -8,6 +8,7 @@ All notable changes to AI Office Landing Skill will be documented in this file.
 - `install.sh` now accepts `--force` / `--yes` / `-y` for unattended reinstall flows, and it fails fast with guidance instead of waiting for interactive input when a previous install already exists
 
 ### Fixed
+- Reworked `state-management.sh` object field access to use literal jq keys, so output IDs like `design-references` and `brief.md` can be marked/read correctly instead of failing or creating nested `outputs_status.brief.md` entries
 - Aligned `.claude-plugin/manifest.json` and `install.sh` with the current root-level `interview.md`, so fresh installs no longer fail on the stale `prompts/interviewer.md` path
 - Replaced the `discover-skills.sh` `info` / `load` lookup with a path-safe `find -print0` helper and jq-safe state key writes, so skills still resolve and load correctly when directories contain spaces or the skill name contains hyphens like `ai-office-landing`
 - Prevented `discover-skills.sh` and `orchestrator.sh` from resetting an existing `ai-office/state.json`; they now initialize workflow state only when the file is missing
