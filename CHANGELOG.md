@@ -6,6 +6,7 @@ All notable changes to AI Office Landing Skill will be documented in this file.
 
 ### Changed
 - `install.sh` now accepts `--force` / `--yes` / `-y` for unattended reinstall flows, and it fails fast with guidance instead of waiting for interactive input when a previous install already exists
+- `setup-github-repo.sh` now emits install examples that run `install.sh` from a temporary full repo checkout instead of a raw single-file script or the final install directory, and the README now documents the same constraint
 
 ### Fixed
 - Reworked `state-management.sh` object field access to use literal jq keys, so output IDs like `design-references` and `brief.md` can be marked/read correctly instead of failing or creating nested `outputs_status.brief.md` entries

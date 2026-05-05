@@ -85,25 +85,30 @@ cat <<'EOF' | sed "s/__SKILL_SHORT_VERSION__/${SKILL_SHORT_VERSION}/g"
 
 ### Option 1: Direct Download
 ```bash
-cd ~/.claude/skills
-wget https://github.com/your-username/ai-office-landing-skill/archive/refs/heads/main.tar.gz
-tar -xzf main.tar.gz
-mv ai-office-landing-skill-main ai-office-landing
-cd ai-office-landing
+tmpdir=$(mktemp -d)
+cd "$tmpdir"
+wget -O ai-office-landing-skill.tar.gz https://github.com/your-username/ai-office-landing-skill/archive/refs/heads/main.tar.gz
+tar -xzf ai-office-landing-skill.tar.gz
+cd ai-office-landing-skill-main
 ./install.sh
 ```
 
 ### Option 2: Git Clone
 ```bash
-cd ~/.claude/skills
-git clone https://github.com/your-username/ai-office-landing-skill.git ai-office-landing
-cd ai-office-landing
+tmpdir=$(mktemp -d)
+git clone https://github.com/your-username/ai-office-landing-skill.git "$tmpdir/ai-office-landing-skill"
+cd "$tmpdir/ai-office-landing-skill"
 ./install.sh
 ```
 
-### Option 3: CURL + Install
+### Option 3: CURL + Tarball
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/your-username/ai-office-landing-skill/main/install.sh)"
+tmpdir=$(mktemp -d)
+cd "$tmpdir"
+curl -fsSL -o ai-office-landing-skill.tar.gz https://github.com/your-username/ai-office-landing-skill/archive/refs/heads/main.tar.gz
+tar -xzf ai-office-landing-skill.tar.gz
+cd ai-office-landing-skill-main
+./install.sh
 ```
 
 ## Usage

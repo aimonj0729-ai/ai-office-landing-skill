@@ -35,6 +35,28 @@
 
 <!-- github-autopilot:updates:start -->
 
+### 2026-05-05 09:40
+
+这次只做了一项高置信度改进：修正发布后安装说明里的错误路径。在 [setup-github-repo.sh](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/setup-github-repo.sh) 里，原先既有 raw `install.sh` 的单文件执行示例，也有“先解压/克隆到最终安装目录再运行安装器”的示例；这两种方式都和实际安装器行为不匹配。`install.sh` 需要同目录下的完整仓库文件，而且它本身会把当前 checkout 复制到 `~/.claude/skills/ai-office-landing`。现在这些示例都统一改成“先拿到临时完整 checkout，再从 checkout 里执行安装器”。[README.md](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md) 已同步加入本次更新说明和可用的 `curl` tarball 安装示例，[CHANGELOG.md](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md) 也已记录。
+
+验证已完成：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- tarball 安装 smoke test：在临时 checkout 和临时 `HOME` 下执行 `./install.sh install`，安装成功，并生成了 `~/.claude/settings.json` 与 `examples/workflow-demo.sh`
+
+未提交，未推送。
+
+### 2026-05-05 09:37
+
+修了一项高置信度的安装说明问题：[`setup-github-repo.sh`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/setup-github-repo.sh>) 之前给发布后的仓库输出了几种不可靠的安装方式，包括 `bash -c "$(curl .../install.sh)"` 这种单文件安装，以及把仓库直接放进 `~/.claude/skills/ai-office-landing` 后再运行 [`install.sh`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/install.sh>)。前者缺少 `.claude-plugin/manifest.json`、`prompts/`、`templates/` 等依赖文件，后者又会让安装器把“当前 checkout”误判成一个已存在安装，和脚本自己的复制逻辑打架。
+
+现在 `setup-github-repo.sh` 里的下载/克隆示例都统一改成“先拿到完整仓库到临时目录，再从 checkout 里执行安装器”；README 也同步补充了“不要直接执行 raw install.sh，也不要在最终安装目录内自举安装”的说明和可用示例。这样保留了一键安装体验，同时不再宣传会天然缺少文件或和安装器逻辑冲突的错误入口；[`CHANGELOG.md`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md>) 也已记录本次调整。
+
+验证已运行：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- 本地 tarball 安装 smoke test：在临时 `HOME` 下打包当前仓库并按新的 tarball 流程解压后执行 `./install.sh install`，安装成功
+
+未提交，未推送。
+
 ### 2026-05-04 09:50
 
 修了一项高置信度的状态管理问题。`state-management.sh` 之前把任务名直接拼进 jq 路径，像 `design-references`、`brief.md` 这类真实键会被当成减号或层级访问处理，结果要么报错，要么写出错误的嵌套结构 `outputs_status.brief.md`。我在 [state-management.sh](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/state-management.sh:60>) 里加了按字面键读取的 helper，把对象字段更新改成 `jq --arg` 安全写法，并让完成状态检查和用户输入读取也走这条安全路径；同时去掉了旧字符串写入会附带换行的问题。README 和变更记录已同步到 [README.md](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:38>)、[CHANGELOG.md](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md:10>)。
@@ -263,6 +285,21 @@ export DEEPSEEK_API_KEY="your-key"
 `state-management.sh` 现在也会按字面键名读写 `outputs_status` 和 `user_inputs`；像 `design-references`、`brief.md` 这类带连字符或点号的真实任务 ID 不会再被误拆成 jq 路径，恢复和完成状态检查会反映真实任务状态。
 
 如果你在 CI、自动化脚本或其他无人值守环境里重复安装这个 skill，直接运行 `./install.sh install --force` 即可跳过覆盖确认；如果目标目录已存在但未传 `--force`，安装脚本会快速失败并提示正确用法，而不会卡在交互输入上。
+
+不要直接执行仓库 raw 链接里的 `install.sh`。这个安装器会读取同目录下的 `.claude-plugin/manifest.json`、`prompts/`、`templates/` 和其他资源文件，必须先拿到完整仓库副本后再运行。
+
+也不要先把仓库解压或克隆到最终安装目录 `~/.claude/skills/ai-office-landing` 再执行安装器。`install.sh` 会把当前 checkout 复制到该目录，所以推荐始终从一个临时 checkout 里运行它。
+
+如果你想保留 `curl` 下载体验，请先下载完整仓库到临时目录，再从 checkout 里安装：
+
+```bash
+tmpdir=$(mktemp -d)
+cd "$tmpdir"
+curl -fsSL -o ai-office-landing-skill.tar.gz https://github.com/aimonj0729-ai/ai-office-landing-skill/archive/refs/heads/main.tar.gz
+tar -xzf ai-office-landing-skill.tar.gz
+cd ai-office-landing-skill-main
+./install.sh
+```
 
 ## 增强特性
 
