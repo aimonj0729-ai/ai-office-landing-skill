@@ -18,6 +18,7 @@ SKILL_NAME="ai-office-landing"
 INSTALL_DIR="${HOME}/.claude/skills/${SKILL_NAME}"
 CURRENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MANIFEST_PATH="${CURRENT_DIR}/.claude-plugin/manifest.json"
+SETTINGS_FILE="${HOME}/.claude/settings.json"
 COMMAND="install"
 FORCE_INSTALL=false
 
@@ -190,8 +191,6 @@ verify_installation() {
 update_claude_settings() {
     log "更新 Claude Code 配置..."
 
-    SETTINGS_FILE="${HOME}/.claude/settings.json"
-
     # Backup existing settings
     if [[ -f "$SETTINGS_FILE" ]]; then
         cp "$SETTINGS_FILE" "${SETTINGS_FILE}.backup"
@@ -215,6 +214,37 @@ update_claude_settings() {
     jq '.skills["ai-office-landing"] = "'"${INSTALL_DIR}"'/SKILL.md"' "$SETTINGS_FILE" > "${SETTINGS_FILE}.tmp" && mv "${SETTINGS_FILE}.tmp" "$SETTINGS_FILE"
 
     success "Claude Code 配置已更新"
+}
+
+remove_skill_from_settings() {
+    if [[ ! -f "$SETTINGS_FILE" ]]; then
+        log "未找到 Claude Code 配置，跳过清理"
+        return 0
+    fi
+
+    if ! command -v jq >/dev/null 2>&1; then
+        warn "jq 未安装，无法从 ${SETTINGS_FILE} 清理 skill 注册"
+        return 0
+    fi
+
+    if ! jq -e '.' "$SETTINGS_FILE" >/dev/null 2>&1; then
+        warn "Claude Code 配置不是有效 JSON，跳过 skill 注册清理"
+        return 0
+    fi
+
+    if ! jq -e --arg skill_name "$SKILL_NAME" '.skills[$skill_name]' "$SETTINGS_FILE" >/dev/null 2>&1; then
+        log "Claude Code 配置中未发现 ${SKILL_NAME} 注册"
+        return 0
+    fi
+
+    cp "$SETTINGS_FILE" "${SETTINGS_FILE}.backup"
+    jq \
+        --arg skill_name "$SKILL_NAME" \
+        'if (.skills | type) == "object" then del(.skills[$skill_name]) else . end' \
+        "$SETTINGS_FILE" > "${SETTINGS_FILE}.tmp"
+    mv "${SETTINGS_FILE}.tmp" "$SETTINGS_FILE"
+
+    success "Claude Code 配置中的 ${SKILL_NAME} 注册已移除"
 }
 
 # Create example workflow
@@ -304,7 +334,7 @@ print_cli_help() {
     echo ""
     echo "命令:"
     echo "  install     - 安装技能 (默认)"
-    echo "  uninstall   - 卸载技能"
+    echo "  uninstall   - 卸载技能并清理 Claude Code 注册"
     echo "  reinstall   - 重新安装"
     echo "  check       - 检查是否已安装"
     echo ""
@@ -371,11 +401,18 @@ case "$COMMAND" in
     uninstall)
         if [[ -d "$INSTALL_DIR" ]]; then
             log "卸载 ${SKILL_NAME}..."
-            rm -rf "$INSTALL_DIR"
-            success "已卸载"
         else
-            warn "技能未安装"
+            warn "技能目录不存在，继续检查 Claude Code 配置"
         fi
+
+        remove_skill_from_settings
+
+        if [[ -d "$INSTALL_DIR" ]]; then
+            rm -rf "$INSTALL_DIR"
+            success "已移除安装目录"
+        fi
+
+        success "已卸载"
         ;;
     reinstall)
         "$0" uninstall

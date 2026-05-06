@@ -35,6 +35,29 @@
 
 <!-- github-autopilot:updates:start -->
 
+### 2026-05-06 09:43
+
+做了一项高置信度的安装体验修复。此前 `./install.sh uninstall` 只会删掉安装目录，不会清理 `~/.claude/settings.json` 里的 skill 注册，卸载后会残留一个失效的 `SKILL.md` 路径。现在 [install.sh](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/install.sh:219) 增加了配置清理逻辑，并把卸载流程改成先移除 `ai-office-landing` 注册，再删除安装目录；如果目录已经被手动删掉，也会继续清理残留注册，[install.sh](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/install.sh:401)。[README.md](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:38) 和 [README.md](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:301) 已同步写明本次更新与卸载说明，[CHANGELOG.md](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md:11) 也已记录。
+
+验证已运行：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- 临时 `HOME` 安装/卸载 smoke test：`./install.sh install` 会注册 skill；随后 `./install.sh uninstall` 会同时删除安装目录和 `~/.claude/settings.json` 中的 `ai-office-landing` 条目
+- 额外补了一次“目录先被手动删掉再执行 uninstall”的验证，残留注册也能被清掉
+
+未提交，未推送。
+
+### 2026-05-06 09:41
+
+这次只做了一项高置信度的安装体验修复：[`install.sh`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/install.sh>) 之前在 `uninstall` 时只会删除 `~/.claude/skills/ai-office-landing` 目录，但不会同步清理 `~/.claude/settings.json` 里的 skill 注册。这样卸载后 Claude Code 仍会保留一个指向已删除 `SKILL.md` 的失效路径，后续排查安装问题时很容易误导用户。
+
+现在 `./install.sh uninstall` 会先检查并移除 `settings.json` 中的 `ai-office-landing` 注册，再删除安装目录；如果技能目录已经被手动删掉，它也会继续尝试清理这条残留注册。[`README.md`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md>) 和 [`CHANGELOG.md`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md>) 已同步记录。
+
+验证已运行：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- 临时 `HOME` 安装/卸载 smoke test：`./install.sh install` 会注册 skill；随后 `./install.sh uninstall` 会同时删除安装目录和 `~/.claude/settings.json` 中的 `ai-office-landing` 条目
+
+未提交，未推送。
+
 ### 2026-05-05 09:40
 
 这次只做了一项高置信度改进：修正发布后安装说明里的错误路径。在 [setup-github-repo.sh](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/setup-github-repo.sh) 里，原先既有 raw `install.sh` 的单文件执行示例，也有“先解压/克隆到最终安装目录再运行安装器”的示例；这两种方式都和实际安装器行为不匹配。`install.sh` 需要同目录下的完整仓库文件，而且它本身会把当前 checkout 复制到 `~/.claude/skills/ai-office-landing`。现在这些示例都统一改成“先拿到临时完整 checkout，再从 checkout 里执行安装器”。[README.md](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md) 已同步加入本次更新说明和可用的 `curl` tarball 安装示例，[CHANGELOG.md](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md) 也已记录。
@@ -285,6 +308,8 @@ export DEEPSEEK_API_KEY="your-key"
 `state-management.sh` 现在也会按字面键名读写 `outputs_status` 和 `user_inputs`；像 `design-references`、`brief.md` 这类带连字符或点号的真实任务 ID 不会再被误拆成 jq 路径，恢复和完成状态检查会反映真实任务状态。
 
 如果你在 CI、自动化脚本或其他无人值守环境里重复安装这个 skill，直接运行 `./install.sh install --force` 即可跳过覆盖确认；如果目标目录已存在但未传 `--force`，安装脚本会快速失败并提示正确用法，而不会卡在交互输入上。
+
+运行 `./install.sh uninstall` 时，脚本也会同步从 `~/.claude/settings.json` 删除 `ai-office-landing` 的注册，避免卸载后保留一个指向已删除 `SKILL.md` 的失效路径；如果你之前手动删过安装目录，也可以再跑一次 `uninstall` 来清理这条残留配置。
 
 不要直接执行仓库 raw 链接里的 `install.sh`。这个安装器会读取同目录下的 `.claude-plugin/manifest.json`、`prompts/`、`templates/` 和其他资源文件，必须先拿到完整仓库副本后再运行。
 
