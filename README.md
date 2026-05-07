@@ -35,6 +35,28 @@
 
 <!-- github-autopilot:updates:start -->
 
+### 2026-05-07 09:41
+
+这次只做了一项高置信度修复：发布脚本 [`setup-github-repo.sh`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/setup-github-repo.sh:6>) 之前在 `gh repo create` 失败时仍会继续执行，最后误报“GitHub 仓库已创建成功”。我把它改成了 fail-fast：现在 `gh auth status`、`gh repo create` 和 GitHub 用户查询任一失败都会立刻退出并给出明确错误，不再输出假的成功信息；仓库地址也改为复用已成功查询到的用户名。[`README.md`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:38>) 和 [`CHANGELOG.md`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md:11>) 已同步记录这次更新。
+
+验证已运行：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- 受控 smoke test：注入会让 `gh repo create` 失败的临时 `gh` stub，确认脚本现在返回退出码 `1`，且不再打印“GitHub 仓库已创建成功”
+
+未提交，未推送。
+
+### 2026-05-07 09:39
+
+这次只做了一项高置信度的发布脚本修复：[`setup-github-repo.sh`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/setup-github-repo.sh>) 之前没有启用严格错误处理，`gh repo create` 失败后脚本仍会继续往下执行，最后错误地打印“GitHub 仓库已创建成功”和仓库地址。这个失败路径很容易在仓库已存在、认证过期或网络异常时误导用户，尤其不适合无人值守发布。
+
+现在脚本已改成 fail-fast：会在 `gh auth status`、`gh repo create` 或当前 GitHub 用户查询失败时立即退出，并输出明确的错误提示，不再在失败后继续展示成功文案。[`CHANGELOG.md`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md>) 也已同步记录。
+
+验证已运行：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- 受控 smoke test：注入一个会让 `gh repo create` 返回非零的临时 `gh` stub，确认脚本现在会直接退出并返回非零状态，不再打印“GitHub 仓库已创建成功”
+
+未提交，未推送。
+
 ### 2026-05-06 09:43
 
 做了一项高置信度的安装体验修复。此前 `./install.sh uninstall` 只会删掉安装目录，不会清理 `~/.claude/settings.json` 里的 skill 注册，卸载后会残留一个失效的 `SKILL.md` 路径。现在 [install.sh](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/install.sh:219) 增加了配置清理逻辑，并把卸载流程改成先移除 `ai-office-landing` 注册，再删除安装目录；如果目录已经被手动删掉，也会继续清理残留注册，[install.sh](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/install.sh:401)。[README.md](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:38) 和 [README.md](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:301) 已同步写明本次更新与卸载说明，[CHANGELOG.md](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md:11) 也已记录。

@@ -3,6 +3,8 @@
 # GitHub Repository Setup Script for AI Office Landing
 #
 
+set -euo pipefail
+
 CURRENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MANIFEST_PATH="${CURRENT_DIR}/.claude-plugin/manifest.json"
 SKILL_VERSION="$(sed -n 's/^[[:space:]]*"version":[[:space:]]*"\([^"]*\)".*/\1/p' "$MANIFEST_PATH" | head -n 1)"
@@ -46,8 +48,7 @@ fi
 
 # Check if user is logged in
 echo "🔑 检查 GitHub 认证状态..."
-gh auth status
-if [ $? -ne 0 ]; then
+if ! gh auth status; then
     echo ""
     echo "请先登录 GitHub:"
     echo "  gh auth login"
@@ -61,17 +62,27 @@ echo "📚 创建 GitHub 仓库..."
 REPO_NAME="ai-office-landing-skill"
 REPO_DESC="AI-powered landing page generator with multi-agent orchestration, cost tracking, and dynamic skill discovery (Claude Code Skill)"
 
-gh repo create "$REPO_NAME" \
+if ! gh repo create "$REPO_NAME" \
   --public \
   --description "$REPO_DESC" \
   --source=. \
   --remote=origin \
-  --push
+  --push; then
+    echo ""
+    echo "❌ GitHub 仓库创建失败，请修复上面的错误后重试"
+    exit 1
+fi
+
+if ! REPO_OWNER="$(gh api user --jq .login)"; then
+    echo ""
+    echo "❌ 无法读取当前 GitHub 用户信息，请确认 gh 登录状态后重试"
+    exit 1
+fi
 
 echo ""
 echo "✅ GitHub 仓库已创建成功!"
 echo ""
-echo "🔗 仓库地址: https://github.com/$(gh api user --jq .login)/$REPO_NAME"
+echo "🔗 仓库地址: https://github.com/${REPO_OWNER}/$REPO_NAME"
 echo ""
 echo "🚀 下一步:"
 echo "   1. 访问仓库查看代码"
