@@ -85,6 +85,20 @@ check_requirements() {
     success "系统要求检查通过"
 }
 
+validate_claude_settings() {
+    if [[ ! -f "$SETTINGS_FILE" ]]; then
+        return 0
+    fi
+
+    if ! jq -e '.' "$SETTINGS_FILE" >/dev/null 2>&1; then
+        error "Claude Code 配置损坏: ${SETTINGS_FILE} 不是有效 JSON。请先修复或删除该文件后再重试。原文件未被修改。"
+    fi
+
+    if ! jq -e '(.skills? == null) or ((.skills | type) == "object")' "$SETTINGS_FILE" >/dev/null 2>&1; then
+        error "Claude Code 配置中的 .skills 不是对象，无法安全注册 ${SKILL_NAME}。请先修复 ${SETTINGS_FILE} 后再重试。"
+    fi
+}
+
 # Check if skill already exists
 check_existing() {
     if [[ -d "$INSTALL_DIR" ]]; then
@@ -191,6 +205,8 @@ verify_installation() {
 update_claude_settings() {
     log "更新 Claude Code 配置..."
 
+    mkdir -p "$(dirname "$SETTINGS_FILE")"
+
     # Backup existing settings
     if [[ -f "$SETTINGS_FILE" ]]; then
         cp "$SETTINGS_FILE" "${SETTINGS_FILE}.backup"
@@ -211,7 +227,15 @@ update_claude_settings() {
     fi
 
     # Register the skill
-    jq '.skills["ai-office-landing"] = "'"${INSTALL_DIR}"'/SKILL.md"' "$SETTINGS_FILE" > "${SETTINGS_FILE}.tmp" && mv "${SETTINGS_FILE}.tmp" "$SETTINGS_FILE"
+    if ! jq \
+        --arg skill_name "$SKILL_NAME" \
+        --arg skill_path "${INSTALL_DIR}/SKILL.md" \
+        '.skills = (.skills // {}) | .skills[$skill_name] = $skill_path' \
+        "$SETTINGS_FILE" > "${SETTINGS_FILE}.tmp"; then
+        rm -f "${SETTINGS_FILE}.tmp"
+        error "写入 Claude Code 配置失败: ${SETTINGS_FILE}"
+    fi
+    mv "${SETTINGS_FILE}.tmp" "$SETTINGS_FILE"
 
     success "Claude Code 配置已更新"
 }
@@ -373,6 +397,8 @@ main() {
     echo ""
 
     check_requirements
+    echo ""
+    validate_claude_settings
     echo ""
     check_existing
     echo ""

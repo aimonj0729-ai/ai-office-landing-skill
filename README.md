@@ -35,6 +35,31 @@
 
 <!-- github-autopilot:updates:start -->
 
+### 2026-05-08 17:30
+
+这次只做了一项高置信度修复：收紧 `install.sh` 的 Claude 配置写入链路，避免在 `~/.claude/settings.json` 损坏时误报安装成功。
+
+在 [install.sh](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/install.sh#L88) 我加了安装前校验：如果 `~/.claude/settings.json` 不是有效 JSON，或者 `.skills` 不是对象，脚本会在复制文件前直接失败并给出明确提示。配置写入步骤也改成了真正的致命错误处理，不再出现 `jq` parse error 已经发生、脚本却继续打印“安装成功”的情况，相关写入逻辑在 [install.sh](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/install.sh#L205)。README 和变更记录已同步到 [README.md](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md#L38)、[README.md](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md#L348) 和 [CHANGELOG.md](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md#L12)。
+
+已运行验证：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- 临时 `HOME` smoke test：把 `~/.claude/settings.json` 预置成无效 JSON 后执行 `./install.sh install`，现在返回非零并明确报错
+- 临时 `HOME` 正常安装 smoke test：`./install.sh install` 返回 `0`，并正确写入 `~/.claude/settings.json` 的 `ai-office-landing` 注册
+
+未提交，也未推送。
+
+### 2026-05-08 16:52
+
+这次只做了一项高置信度的安装链路修复：[`install.sh`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/install.sh>) 之前在 `~/.claude/settings.json` 已损坏成无效 JSON 时，会先打印 `jq` 解析错误，但随后仍继续输出“安装成功”并返回成功状态。这对无人值守安装尤其危险，因为自动化会误以为 skill 已正确注册。
+
+现在安装器会在复制文件前先校验 `~/.claude/settings.json`：如果它不是有效 JSON，或者 `.skills` 不是对象，就会立即失败并给出明确提示；同时把配置写入步骤改成真正的致命错误处理，不再在 `jq` 失败后继续打印成功文案。[`README.md`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md>) 和 [`CHANGELOG.md`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md>) 已同步记录这次修复。
+
+验证已运行：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- 临时 `HOME` smoke test：把 `~/.claude/settings.json` 预置成无效 JSON 后执行 `./install.sh install`，现在脚本会返回非零并明确提示配置损坏；不再在 `jq` parse error 后继续输出“安装成功”
+
+未提交，未推送。
+
 ### 2026-05-07 09:41
 
 这次只做了一项高置信度修复：发布脚本 [`setup-github-repo.sh`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/setup-github-repo.sh:6>) 之前在 `gh repo create` 失败时仍会继续执行，最后误报“GitHub 仓库已创建成功”。我把它改成了 fail-fast：现在 `gh auth status`、`gh repo create` 和 GitHub 用户查询任一失败都会立刻退出并给出明确错误，不再输出假的成功信息；仓库地址也改为复用已成功查询到的用户名。[`README.md`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:38>) 和 [`CHANGELOG.md`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md:11>) 已同步记录这次更新。
@@ -332,6 +357,8 @@ export DEEPSEEK_API_KEY="your-key"
 如果你在 CI、自动化脚本或其他无人值守环境里重复安装这个 skill，直接运行 `./install.sh install --force` 即可跳过覆盖确认；如果目标目录已存在但未传 `--force`，安装脚本会快速失败并提示正确用法，而不会卡在交互输入上。
 
 运行 `./install.sh uninstall` 时，脚本也会同步从 `~/.claude/settings.json` 删除 `ai-office-landing` 的注册，避免卸载后保留一个指向已删除 `SKILL.md` 的失效路径；如果你之前手动删过安装目录，也可以再跑一次 `uninstall` 来清理这条残留配置。
+
+如果 `~/.claude/settings.json` 已被手动改坏成无效 JSON，`install.sh` 现在会在复制文件前直接报错并停止，不会再一边打印 `jq` parse error 一边继续输出“安装成功”。先修复或删除这个损坏的配置文件，再重新执行安装即可。
 
 不要直接执行仓库 raw 链接里的 `install.sh`。这个安装器会读取同目录下的 `.claude-plugin/manifest.json`、`prompts/`、`templates/` 和其他资源文件，必须先拿到完整仓库副本后再运行。
 

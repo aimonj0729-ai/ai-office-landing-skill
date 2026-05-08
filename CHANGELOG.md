@@ -9,6 +9,7 @@ All notable changes to AI Office Landing Skill will be documented in this file.
 - `setup-github-repo.sh` now emits install examples that run `install.sh` from a temporary full repo checkout instead of a raw single-file script or the final install directory, and the README now documents the same constraint
 
 ### Fixed
+- `install.sh` now validates `~/.claude/settings.json` before copying files and fails fast when the file is invalid JSON or `.skills` is not an object, so unattended installs no longer print a misleading success message after a `jq` parse error
 - `setup-github-repo.sh` now exits immediately when `gh auth status`, `gh repo create`, or GitHub user lookup fails, so a rejected publish attempt no longer falls through to a false "repository created successfully" message
 - `install.sh uninstall` now removes the `ai-office-landing` entry from `~/.claude/settings.json`, so uninstalling the skill no longer leaves a stale `SKILL.md` path behind
 - Reworked `state-management.sh` object field access to use literal jq keys, so output IDs like `design-references` and `brief.md` can be marked/read correctly instead of failing or creating nested `outputs_status.brief.md` entries
