@@ -91,14 +91,17 @@ echo "   3. 在 README 中添加使用示例"
 echo ""
 echo "📖 安装和使用说明:"
 echo ""
-cat <<'EOF' | sed "s/__SKILL_SHORT_VERSION__/${SKILL_SHORT_VERSION}/g"
+cat <<'EOF' | sed \
+  -e "s/__SKILL_SHORT_VERSION__/${SKILL_SHORT_VERSION}/g" \
+  -e "s/__REPO_OWNER__/${REPO_OWNER}/g" \
+  -e "s/__REPO_NAME__/${REPO_NAME}/g"
 ## Installation
 
 ### Option 1: Direct Download
 ```bash
 tmpdir=$(mktemp -d)
 cd "$tmpdir"
-wget -O ai-office-landing-skill.tar.gz https://github.com/your-username/ai-office-landing-skill/archive/refs/heads/main.tar.gz
+wget -O ai-office-landing-skill.tar.gz https://github.com/__REPO_OWNER__/__REPO_NAME__/archive/refs/heads/main.tar.gz
 tar -xzf ai-office-landing-skill.tar.gz
 cd ai-office-landing-skill-main
 ./install.sh
@@ -107,7 +110,7 @@ cd ai-office-landing-skill-main
 ### Option 2: Git Clone
 ```bash
 tmpdir=$(mktemp -d)
-git clone https://github.com/your-username/ai-office-landing-skill.git "$tmpdir/ai-office-landing-skill"
+git clone https://github.com/__REPO_OWNER__/__REPO_NAME__.git "$tmpdir/ai-office-landing-skill"
 cd "$tmpdir/ai-office-landing-skill"
 ./install.sh
 ```
@@ -116,7 +119,7 @@ cd "$tmpdir/ai-office-landing-skill"
 ```bash
 tmpdir=$(mktemp -d)
 cd "$tmpdir"
-curl -fsSL -o ai-office-landing-skill.tar.gz https://github.com/your-username/ai-office-landing-skill/archive/refs/heads/main.tar.gz
+curl -fsSL -o ai-office-landing-skill.tar.gz https://github.com/__REPO_OWNER__/__REPO_NAME__/archive/refs/heads/main.tar.gz
 tar -xzf ai-office-landing-skill.tar.gz
 cd ai-office-landing-skill-main
 ./install.sh

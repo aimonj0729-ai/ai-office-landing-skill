@@ -35,6 +35,30 @@
 
 <!-- github-autopilot:updates:start -->
 
+### 2026-05-09 16:03
+
+修了一项高置信度的发布体验问题：[`setup-github-repo.sh`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/setup-github-repo.sh:94>) 在 `gh repo create` 成功后，原先打印的安装示例仍然写死 `your-username`，用户直接复制会得到 404。现在脚本会把已解析到的 `REPO_OWNER` / `REPO_NAME` 注入到 `wget`、`git clone` 和 `curl` 示例里，发布完成后终端输出可以直接使用。
+
+README 和变更记录也同步了这次修复：[`README.md`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:38>) 新增了本次更新说明，[`README.md`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:390>) 补了发布后安装命令的说明，[`CHANGELOG.md`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md:14>) 记录了该修复。
+
+验证已运行：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- 成功路径 smoke test：注入临时 `gh` stub 后运行 `bash ./setup-github-repo.sh`，确认输出中的仓库地址、tarball URL 和 `git clone` URL 都使用 `stub-owner/ai-office-landing-skill`，且不再出现 `your-username`
+
+未提交，未推送。
+
+### 2026-05-09 16:02
+
+这次只做了一项高置信度修复：发布脚本 [`setup-github-repo.sh`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/setup-github-repo.sh>) 在 `gh repo create` 成功之后，后续打印给用户的安装示例还残留 `your-username` 占位符，导致仓库虽然已经创建成功，但复制 README 里的命令仍然会 404。这个问题直接影响发布后的首次安装体验，也不适合无人值守分发。
+
+现在脚本会把已解析到的 GitHub 用户名继续注入到 tarball、`git clone` 和 `curl` 安装示例里，发布完成后终端里看到的命令可以直接复制使用；README 也同步补了一条说明，明确 `setup-github-repo.sh` 现在会输出带真实 owner 的可执行安装链接。[`README.md`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md>) 和 [`CHANGELOG.md`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md>) 已同步记录。
+
+验证已运行：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- 受控 smoke test：注入成功路径 `gh` stub 后执行 `bash ./setup-github-repo.sh`，确认输出的 `wget`、`git clone` 和 `curl` 示例都已替换成真实 owner `stub-owner`，不再包含 `your-username`
+
+未提交，未推送。
+
 ### 2026-05-08 17:30
 
 这次只做了一项高置信度修复：收紧 `install.sh` 的 Claude 配置写入链路，避免在 `~/.claude/settings.json` 损坏时误报安装成功。
@@ -374,6 +398,8 @@ tar -xzf ai-office-landing-skill.tar.gz
 cd ai-office-landing-skill-main
 ./install.sh
 ```
+
+如果你使用 `./setup-github-repo.sh` 发布自己的仓库，脚本现在也会在发布成功后直接打印带真实 GitHub owner 的 tarball 和 `git clone` 安装命令，便于把可执行示例原样发给用户。
 
 ## 增强特性
 
