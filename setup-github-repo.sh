@@ -6,10 +6,14 @@
 set -euo pipefail
 
 CURRENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CURRENT_DIR_SHELL="$(printf '%q' "$CURRENT_DIR")"
 MANIFEST_PATH="${CURRENT_DIR}/.claude-plugin/manifest.json"
 SKILL_VERSION="$(sed -n 's/^[[:space:]]*"version":[[:space:]]*"\([^"]*\)".*/\1/p' "$MANIFEST_PATH" | head -n 1)"
 SKILL_VERSION="${SKILL_VERSION:-2.4.0}"
 SKILL_SHORT_VERSION="${SKILL_VERSION%.*}"
+REPO_NAME="ai-office-landing-skill"
+REPO_DESC="AI-powered landing page generator with multi-agent orchestration, cost tracking, and dynamic skill discovery (Claude Code Skill)"
+REPO_OWNER_HINT="${GITHUB_OWNER:-${REPO_OWNER:-<your-github-username>}}"
 
 echo "📦 准备发布 AI Office Landing v${SKILL_SHORT_VERSION} 到 GitHub"
 echo ""
@@ -30,17 +34,19 @@ if ! command -v gh &> /dev/null; then
     echo "1. 访问: https://github.com/new"
     echo ""
     echo "2. 填写仓库信息:"
-    echo "   - 仓库名称: ai-office-landing-skill"
-    echo "   - 描述: AI-powered landing page generator with multi-agent orchestration, cost tracking, and dynamic skill discovery (Claude Code Skill)"
+    echo "   - 仓库名称: ${REPO_NAME}"
+    echo "   - 描述: ${REPO_DESC}"
     echo "   - 选择: Public"
     echo "   - 勾选: Add a README file"
     echo "   - 勾选: Add .gitignore: Shell"
     echo "   - 勾选: Choose a license: MIT"
     echo ""
     echo "3. 创建完成后，执行:"
-    echo "   cd /tmp/ai-office-landing"
-    echo "   git remote add origin https://github.com/your-username/ai-office-landing-skill.git"
+    echo "   cd ${CURRENT_DIR_SHELL}"
+    echo "   git remote add origin https://github.com/${REPO_OWNER_HINT}/${REPO_NAME}.git"
     echo "   git push -u origin main"
+    echo ""
+    echo "提示: 如需把远程地址里的 owner 也自动替换成真实值，可先设置 GITHUB_OWNER 或 REPO_OWNER 后再运行此脚本。"
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     exit 1
@@ -58,9 +64,6 @@ fi
 # Create repository
 echo ""
 echo "📚 创建 GitHub 仓库..."
-
-REPO_NAME="ai-office-landing-skill"
-REPO_DESC="AI-powered landing page generator with multi-agent orchestration, cost tracking, and dynamic skill discovery (Claude Code Skill)"
 
 if ! gh repo create "$REPO_NAME" \
   --public \

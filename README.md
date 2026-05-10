@@ -35,6 +35,32 @@
 
 <!-- github-autopilot:updates:start -->
 
+### 2026-05-10 09:43
+
+修的是一处高置信度的发布回退问题。[setup-github-repo.sh](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/setup-github-repo.sh:8) 在本机没有 `gh` 时，原先给出的手动发布步骤把本地目录写死成 `/tmp/ai-office-landing`，而且 `git remote add origin` 也始终是占位符。现在它会改用当前 checkout 的真实路径，并支持从 `GITHUB_OWNER` 或 `REPO_OWNER` 注入 owner；如果没设置，也会明确提示。这样在没有 GitHub CLI 的机器上，回退说明可以直接更接近可执行状态。
+
+README 和变更记录已同步到 [README.md](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:38)、[README.md](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:415) 和 [CHANGELOG.md](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md:11)，方便用户直接看到这次修复。
+
+已运行验证：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- `env PATH=/usr/bin:/bin bash ./setup-github-repo.sh`
+- `env PATH=/usr/bin:/bin GITHUB_OWNER=stub-owner bash ./setup-github-repo.sh`
+
+结果正常：无 `gh` 回退输出现在指向当前仓库路径，且在设置 `GITHUB_OWNER` 时会生成带真实 owner 的远程地址。未提交，未推送。
+
+### 2026-05-10 09:42
+
+这次只做了一项高置信度的发布回退修复：[`setup-github-repo.sh`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/setup-github-repo.sh>) 在本机未安装 `gh` 时，会打印一套手动创建 GitHub 仓库的备用步骤；但这套步骤之前把本地目录写死成 `/tmp/ai-office-landing`，和实际 checkout 无关，复制后很容易直接进入不存在的目录。与此同时，哪怕调用方已经通过环境变量知道 GitHub owner，回退命令里的 `git remote add origin` 也仍然固定输出占位符。
+
+现在这个回退路径会直接引用当前仓库 checkout 的真实路径，并支持从 `GITHUB_OWNER` 或 `REPO_OWNER` 环境变量注入远程仓库 owner；如果这两个变量都没设，脚本也会明确提示可以先设置后重跑，这样在缺少 GitHub CLI 的机器上也能更可靠地完成手动发布。README 和变更记录已同步更新。
+
+验证已运行：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- `env PATH=/usr/bin:/bin bash ./setup-github-repo.sh`
+- `env PATH=/usr/bin:/bin GITHUB_OWNER=stub-owner bash ./setup-github-repo.sh`
+
+未提交，未推送。
+
 ### 2026-05-09 16:03
 
 修了一项高置信度的发布体验问题：[`setup-github-repo.sh`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/setup-github-repo.sh:94>) 在 `gh repo create` 成功后，原先打印的安装示例仍然写死 `your-username`，用户直接复制会得到 404。现在脚本会把已解析到的 `REPO_OWNER` / `REPO_NAME` 注入到 `wget`、`git clone` 和 `curl` 示例里，发布完成后终端输出可以直接使用。
@@ -400,6 +426,8 @@ cd ai-office-landing-skill-main
 ```
 
 如果你使用 `./setup-github-repo.sh` 发布自己的仓库，脚本现在也会在发布成功后直接打印带真实 GitHub owner 的 tarball 和 `git clone` 安装命令，便于把可执行示例原样发给用户。
+
+如果当前机器还没装 `gh`，脚本输出的手动发布回退步骤现在也会直接指向当前 checkout；如先设置 `GITHUB_OWNER=your-name` 或 `REPO_OWNER=your-name`，回退说明里的 `git remote add origin` 也会自动带上真实 owner，减少手工替换。
 
 ## 增强特性
 

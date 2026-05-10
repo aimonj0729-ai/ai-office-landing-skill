@@ -9,6 +9,7 @@ All notable changes to AI Office Landing Skill will be documented in this file.
 - `setup-github-repo.sh` now emits install examples that run `install.sh` from a temporary full repo checkout instead of a raw single-file script or the final install directory, and the README now documents the same constraint
 
 ### Fixed
+- `setup-github-repo.sh` now points the no-`gh` manual publish fallback at the current local checkout instead of a hardcoded `/tmp/ai-office-landing` path, and it can also substitute `GITHUB_OWNER` / `REPO_OWNER` into the suggested `git remote add origin` command
 - `install.sh` now validates `~/.claude/settings.json` before copying files and fails fast when the file is invalid JSON or `.skills` is not an object, so unattended installs no longer print a misleading success message after a `jq` parse error
 - `setup-github-repo.sh` now exits immediately when `gh auth status`, `gh repo create`, or GitHub user lookup fails, so a rejected publish attempt no longer falls through to a false "repository created successfully" message
 - `setup-github-repo.sh` now substitutes the resolved GitHub owner into its post-publish tarball, `git clone`, and `curl` install examples, so release output no longer leaves users with `your-username` placeholder URLs that 404
