@@ -263,7 +263,7 @@ get_pending_questions_count() {
 # Get pending questions for a specific source
 get_questions_for_source() {
     local source="$1"
-    read_state "pending_questions" "[]" | jq -r ".[] | select(.source == \"$source\") | .questions[]"
+    read_state "pending_questions" "[]" | jq -r --arg source "$source" '.[] | select(.source == $source) | .questions[]'
 }
 
 # Mark task as completed in state
@@ -284,10 +284,12 @@ mark_question_resolved() {
     # A full implementation would handle individual questions
 
     # Get current pending questions
-    local current_questions=$(read_state "pending_questions")
+    local current_questions
+    current_questions=$(read_state "pending_questions" "[]")
 
     # Filter out questions for this source
-    local updated_questions=$(echo "$current_questions" | jq "map(select(.source != \"$source\"))")
+    local updated_questions
+    updated_questions=$(echo "$current_questions" | jq --arg source "$source" 'map(select(.source != $source))')
 
     write_state "pending_questions" "$updated_questions" "array"
     log_success "Resolved questions for $source"
@@ -302,11 +304,19 @@ add_pending_question() {
     local question_obj
     if [[ -n "$questions_file" && -f "$questions_file" ]]; then
         # Read questions from file
-        local questions_content=$(cat "$questions_file" | grep "QUESTION:" | sed 's/.*QUESTION: \(.*\)/\1/' | jq -R -s -c 'split("\n") | map(select(length > 0))')
-        question_obj=$(echo "{}" | jq ".source = \"$source\" | .file = \"$questions_file\" | .questions = $questions_content")
+        local questions_content
+        questions_content=$(grep "QUESTION:" "$questions_file" | sed 's/.*QUESTION: \(.*\)/\1/' | jq -R -s -c 'split("\n") | map(select(length > 0))')
+        question_obj=$(jq -n \
+            --arg source "$source" \
+            --arg file "$questions_file" \
+            --argjson questions "$questions_content" \
+            '{source: $source, file: $file, questions: $questions}')
     else
         # Single question
-        question_obj=$(echo "{}" | jq ".source = \"$source\" | .questions = [\"$question\"]")
+        question_obj=$(jq -n \
+            --arg source "$source" \
+            --arg question "$question" \
+            '{source: $source, questions: [$question]}')
     fi
 
     append_to_state_array "pending_questions" "$question_obj"
@@ -318,7 +328,13 @@ create_checkpoint() {
     local task="${2:-0}"
     local text="$3"
 
-    local checkpoint=$(echo "{}" | jq ".phase = $phase | .task = $task | .text = \"$text\" | .timestamp = \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"")
+    local checkpoint
+    checkpoint=$(jq -n \
+        --argjson phase "$phase" \
+        --argjson task "$task" \
+        --arg text "$text" \
+        --arg timestamp "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+        '{phase: $phase, task: $task, text: $text, timestamp: $timestamp}')
     write_state "checkpoint" "$checkpoint" "object"
 }
 

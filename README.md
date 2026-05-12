@@ -35,6 +35,32 @@
 
 <!-- github-autopilot:updates:start -->
 
+### 2026-05-12 09:38
+
+这次只做了一项高置信度修复：把 [state-management.sh](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/state-management.sh:263) 里几处把自由文本直接拼进 `jq` 表达式的逻辑，改成了 `--arg` / `--argjson` 安全传参。受影响的是 `get_questions_for_source`、`mark_question_resolved`、`add_pending_question` 和 `create_checkpoint`。修这个是因为它能稳定复现：只要提问或 checkpoint 文案里带双引号，例如 `用户说 "hero 文案" 需要更短`，脚本之前就会报 `jq compile error`，直接破坏对话式状态保存。
+
+README 和变更记录已经同步到 [README.md](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:38)、[README.md](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:418) 和 [CHANGELOG.md](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md:11)，用户现在可以直接从主 README 看到这次修复内容。
+
+已运行验证：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- 临时目录 smoke test：`add_pending_question 'critic' '用户说 "hero 文案" 需要更短'`
+- 临时目录 smoke test：`create_checkpoint 2 1 '用户要求 "先保留现有色板"'`
+
+结果正常：两类带引号的文本都能成功写入 `ai-office/state.json`。未提交，未推送。
+
+### 2026-05-12 09:37
+
+这次只做了一项高置信度的状态管理稳定性修复：`state-management.sh` 之前在 `add_pending_question`、`get_questions_for_source`、`mark_question_resolved` 和 `create_checkpoint` 里，把用户文本直接拼进 `jq` 表达式。只要问题或 checkpoint 文案里带双引号，比如 `用户说 "hero 文案" 需要更短`，脚本就会直接报 `jq compile error`，导致对话式工作流的待处理问题和断点状态无法保存。
+
+现在这些入口都改成了 `jq --arg` / `--argjson` 的安全写法，带引号、空格和其他普通自由文本的提问、来源名和 checkpoint 文案都能正常写回 `ai-office/state.json`。README 和变更记录已同步更新，方便直接从仓库首页看到这次修复。
+
+验证已运行：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- 临时目录 smoke test：`add_pending_question 'critic' '用户说 "hero 文案" 需要更短'`
+- 临时目录 smoke test：`create_checkpoint 2 1 '用户要求 "先保留现有色板"'`
+
+结果正常：两类带引号的自由文本现在都能成功写入状态文件，不再触发 `jq` 语法错误。未提交，未推送。
+
 ### 2026-05-10 09:43
 
 修的是一处高置信度的发布回退问题。[setup-github-repo.sh](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/setup-github-repo.sh:8) 在本机没有 `gh` 时，原先给出的手动发布步骤把本地目录写死成 `/tmp/ai-office-landing`，而且 `git remote add origin` 也始终是占位符。现在它会改用当前 checkout 的真实路径，并支持从 `GITHUB_OWNER` 或 `REPO_OWNER` 注入 owner；如果没设置，也会明确提示。这样在没有 GitHub CLI 的机器上，回退说明可以直接更接近可执行状态。
@@ -402,7 +428,7 @@ export DEEPSEEK_API_KEY="your-key"
 
 `discover-skills.sh` 和 `orchestrator.sh` 现在只会在缺少 `ai-office/state.json` 时初始化状态；如果你正在用 `--resume` 继续一个进行中的项目，再次运行这些辅助脚本也不会把当前 phase、checkpoint 和输出状态清空。
 
-`state-management.sh` 现在也会按字面键名读写 `outputs_status` 和 `user_inputs`；像 `design-references`、`brief.md` 这类带连字符或点号的真实任务 ID 不会再被误拆成 jq 路径，恢复和完成状态检查会反映真实任务状态。
+`state-management.sh` 现在也会按字面键名读写 `outputs_status` 和 `user_inputs`，并且对 `pending_questions` / checkpoint 里的自由文本改成了 `jq --arg` 安全写入；像 `design-references`、`brief.md` 这类带连字符或点号的真实任务 ID，以及 `用户说 "hero 文案" 需要更短` 这类带引号的问题文本，都不会再把状态写入流程搞坏。
 
 如果你在 CI、自动化脚本或其他无人值守环境里重复安装这个 skill，直接运行 `./install.sh install --force` 即可跳过覆盖确认；如果目标目录已存在但未传 `--force`，安装脚本会快速失败并提示正确用法，而不会卡在交互输入上。
 
