@@ -7,9 +7,11 @@ All notable changes to AI Office Landing Skill will be documented in this file.
 ### Changed
 - `install.sh` now accepts `--force` / `--yes` / `-y` for unattended reinstall flows, and it fails fast with guidance instead of waiting for interactive input when a previous install already exists
 - `setup-github-repo.sh` now emits install examples that run `install.sh` from a temporary full repo checkout instead of a raw single-file script or the final install directory, and the README now documents the same constraint
+- `SKILL.md` state-management examples now use the repository's helper functions (`ensure_state_initialized`, `mark_task_completed`, `add_pending_question`, `create_checkpoint`, etc.) instead of showing direct `jq` writes that no longer match the shipped scripts
 
 ### Fixed
 - `state-management.sh` now passes freeform pending-question text, source names, and checkpoint text into `jq` via `--arg` / `--argjson`, so quotes inside conversational prompts no longer trigger compile errors or break `ai-office/state.json`
+- Removed stale `SKILL.md` snippets that still taught direct `jq ".$key = $value"` / `pending_questions[0]` / `outputs_status.$role` state writes, so the docs no longer point users back to patterns already fixed in `state-management.sh`
 - `setup-github-repo.sh` now points the no-`gh` manual publish fallback at the current local checkout instead of a hardcoded `/tmp/ai-office-landing` path, and it can also substitute `GITHUB_OWNER` / `REPO_OWNER` into the suggested `git remote add origin` command
 - `install.sh` now validates `~/.claude/settings.json` before copying files and fails fast when the file is invalid JSON or `.skills` is not an object, so unattended installs no longer print a misleading success message after a `jq` parse error
 - `setup-github-repo.sh` now exits immediately when `gh auth status`, `gh repo create`, or GitHub user lookup fails, so a rejected publish attempt no longer falls through to a false "repository created successfully" message

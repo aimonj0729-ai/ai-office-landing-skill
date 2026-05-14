@@ -188,41 +188,30 @@ Phase 5: Final Delivery
 ### State Operations
 
 ```bash
-# 读取状态
-read_state() {
-  if [[ -f "ai-office/state.json" ]]; then
-    cat ai-office/state.json | jq -r ".$1"
-  else
-    echo ""
-  fi
-}
+# 先加载仓库内置 helper，避免手写 jq 表达式
+source "$SKILL_ROOT/state-management.sh"
 
-# 写入状态
-write_state() {
-  local key="$1"
-  local value="$2"
-  
-  # 读取现有状态或创建新状态
-  if [[ -f "ai-office/state.json" ]]; then
-    local state=$(cat ai-office/state.json)
-  else
-    local state='{"version": "v2"}'
-  fi
-  
-  # 使用 jq 更新状态
-  echo "$state" | jq ".$key = $value" > ai-office/state.json.tmp
-  mv ai-office/state.json.tmp ai-office/state.json
-}
+# 缺少 state.json 时才初始化，保留 --resume 现场
+ensure_state_initialized
 
-# 示例：更新当前阶段
-write_state "current_phase" "3"
+# 读取当前进度
+CURRENT_PHASE="$(get_current_phase)"
+CURRENT_TASK="$(get_current_task)"
 
-# 示例：添加待处理问题
-write_state 'pending_questions[0]' '{
-  "source": "designer",
-  "questions": ["需要确认配色方案"],
-  "file": "ai-office/questions/designer-questions.md"
-}'
+# 写入简单字段时显式传 value_type
+write_state "current_phase" "3" "number"
+write_state "current_task" "1" "number"
+
+# 对带点号/连字符的真实输出键，使用字面键 helper
+mark_task_waiting_for_user "design-spec.md"
+mark_task_completed "copy.md"
+
+# 保存用户补充输入
+save_user_input "hero_image_type" "真实照片"
+
+# 添加待处理问题与 checkpoint，不要直接手拼 pending_questions JSON
+add_pending_question "designer" "需要确认配色方案"
+create_checkpoint 3 2 "Designer 等待用户确认配色方案"
 ```
 
 ### Recovery Logic
@@ -230,7 +219,8 @@ write_state 'pending_questions[0]' '{
 每个阶段开始时检查 state.json：
 ```bash
 if [[ -f "ai-office/state.json" ]]; then
-  CURRENT_PHASE=$(read_state "current_phase")
+  source "$SKILL_ROOT/state-management.sh"
+  CURRENT_PHASE=$(get_current_phase)
   log "从 Phase $CURRENT_PHASE 恢复..."
 else
   CURRENT_PHASE=0
@@ -641,6 +631,8 @@ execute_with_qa() {
 check_task_questions() {
   local role="$1"
   local output_path="$2"
+  local output_key
+  output_key="$(basename "$output_path")"
   
   # 检查 output 文件中是否有 [GAP] 或 [QUESTION] 标记
   if grep -q "\[GAP:" "$output_path" || grep -q "\[QUESTION:" "$output_path"; then
@@ -650,14 +642,10 @@ check_task_questions() {
     local questions_file="ai-office/questions/${role}-questions.md"
     extract_questions_from_output "$output_path" > "$questions_file"
     
-    # 更新状态
-    write_state "pending_questions[0]" "{
-      \"source\": \"$role\",
-      \"file\": \"$questions_file\",
-      \"questions\": $(cat "$questions_file" | jq -R -s -c 'split("\n") | map(select(length > 0))')
-    }"
-    
-    write_state "outputs_status.$role" ""waiting_for_user""
+    # 用 helper 更新状态，避免把自由文本直接拼进 jq
+    add_pending_question "$role" "" "$questions_file"
+    mark_task_waiting_for_user "$output_key"
+    create_checkpoint 3 "${CURRENT_TASK:-0}" "$role 等待用户回答"
     
     # 问用户
     ask_user_and_update "$role"
@@ -666,10 +654,10 @@ check_task_questions() {
     apply_user_answers "$output_path" "${USER_ANSWERS}"
     
     # 标记为已完成
-    write_state "outputs_status.$role" ""completed_with_user_feedback""
+    mark_task_completed "$output_key" "completed_with_user_feedback"
   else
     log "$role 无问题，继续下一步"
-    write_state "outputs_status.$role" ""completed""
+    mark_task_completed "$output_key"
   fi
 }
 
