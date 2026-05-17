@@ -36,19 +36,150 @@ if ! command -v jq &> /dev/null; then
     exit 1
 fi
 
+# Build a jq path array from a state path.
+# Supports nested dotted paths (`orchestrator.metrics.size`), hyphenated keys
+# (`outputs_status.design-references`), and bracket-quoted literal keys such
+# as `skills.loaded.designer["ai-office-landing"]`.
+build_state_path_json() {
+    local key="$1"
+    local -a segments=()
+    local current=""
+    local char=""
+    local bracket_content=""
+    local quoted=""
+    local path_json='[]'
+    local segment=""
+    local i=0
+    local length=${#key}
+
+    while (( i < length )); do
+        char="${key:i:1}"
+
+        case "$char" in
+            .)
+                if [[ -n "$current" ]]; then
+                    segments+=("$current")
+                    current=""
+                fi
+                ;;
+            '[')
+                if [[ -n "$current" ]]; then
+                    segments+=("$current")
+                    current=""
+                fi
+
+                ((i++))
+                if (( i >= length )); then
+                    return 1
+                fi
+
+                char="${key:i:1}"
+                if [[ "$char" == '"' ]]; then
+                    ((i++))
+                    quoted=""
+                    while (( i < length )); do
+                        char="${key:i:1}"
+                        if [[ "$char" == "\\" ]]; then
+                            ((i++))
+                            if (( i >= length )); then
+                                return 1
+                            fi
+                            quoted+="${key:i:1}"
+                        elif [[ "$char" == '"' ]]; then
+                            break
+                        else
+                            quoted+="$char"
+                        fi
+                        ((i++))
+                    done
+
+                    if (( i >= length )) || [[ "${key:i:1}" != '"' ]]; then
+                        return 1
+                    fi
+
+                    ((i++))
+                    if (( i >= length )) || [[ "${key:i:1}" != ']' ]]; then
+                        return 1
+                    fi
+
+                    segments+=("$quoted")
+                else
+                    bracket_content=""
+                    while (( i < length )) && [[ "${key:i:1}" != ']' ]]; do
+                        bracket_content+="${key:i:1}"
+                        ((i++))
+                    done
+
+                    if (( i >= length )) || [[ "${key:i:1}" != ']' ]] || [[ -z "$bracket_content" ]]; then
+                        return 1
+                    fi
+
+                    if [[ "$bracket_content" =~ ^[0-9]+$ ]]; then
+                        segments+=("__INDEX__${bracket_content}")
+                    else
+                        segments+=("$bracket_content")
+                    fi
+                fi
+                ;;
+            *)
+                current+="$char"
+                ;;
+        esac
+
+        ((i++))
+    done
+
+    if [[ -n "$current" ]]; then
+        segments+=("$current")
+    fi
+
+    if [[ ${#segments[@]} -eq 0 ]]; then
+        return 1
+    fi
+
+    for segment in "${segments[@]}"; do
+        if [[ "$segment" == __INDEX__* ]]; then
+            if ! path_json=$(jq -c --argjson segment "${segment#__INDEX__}" '. + [$segment]' <<< "$path_json"); then
+                return 1
+            fi
+        else
+            if ! path_json=$(jq -c --arg segment "$segment" '. + [$segment]' <<< "$path_json"); then
+                return 1
+            fi
+        fi
+    done
+
+    printf '%s\n' "$path_json"
+}
+
 # Read state from ai-office/state.json
 # Usage: read_state "key" [default_value]
 read_state() {
     local key="$1"
     local default_value="${2:-}"
+    local path_json=""
+    local value=""
 
     if [[ ! -f "ai-office/state.json" ]]; then
         echo "$default_value"
         return
     fi
 
-    # Use jq to extract the value
-    local value=$(jq -r ".$key // empty" ai-office/state.json 2>/dev/null)
+    if ! path_json=$(build_state_path_json "$key"); then
+        echo "$default_value"
+        return
+    fi
+
+    if ! value=$(jq -r \
+        --argjson path "$path_json" \
+        'getpath($path) as $value
+        | if $value == null then empty
+          elif ($value | type) == "string" then $value
+          else ($value | tojson)
+          end' \
+        ai-office/state.json 2>/dev/null); then
+        value=""
+    fi
 
     if [[ -z "$value" ]]; then
         echo "$default_value"
@@ -64,19 +195,21 @@ read_state_object_field() {
     local object_key="$1"
     local field="$2"
     local default_value="${3:-}"
+    local value=""
 
     if [[ ! -f "ai-office/state.json" ]]; then
         echo "$default_value"
         return
     fi
 
-    local value
-    value=$(jq -r \
+    if ! value=$(jq -r \
         --arg object_key "$object_key" \
         --arg field "$field" \
         --arg default_value "$default_value" \
         '.[$object_key][$field] // $default_value' \
-        ai-office/state.json 2>/dev/null)
+        ai-office/state.json 2>/dev/null); then
+        value="$default_value"
+    fi
 
     if [[ -z "$value" ]]; then
         echo "$default_value"
@@ -91,6 +224,8 @@ write_state() {
     local key="$1"
     local value="$2"
     local value_type="${3:-string}"
+    local path_json=""
+    local jq_value=""
 
     # Create ai-office directory if it doesn't exist
     mkdir -p ai-office
@@ -100,11 +235,12 @@ write_state() {
         echo '{"version": "v2"}' > ai-office/state.json
     fi
 
-    # Read current state
-    local state=$(cat ai-office/state.json 2>/dev/null || echo '{"version": "v2"}')
+    if ! path_json=$(build_state_path_json "$key"); then
+        log_error "Failed to parse state path: $key"
+        return 1
+    fi
 
     # Prepare the value for jq based on type
-    local jq_value=""
     case "$value_type" in
         string)
             jq_value=$(printf '%s' "$value" | jq -R -s .)
@@ -124,10 +260,11 @@ write_state() {
             ;;
     esac
 
-    # Update the state using jq
-    echo "$state" | jq ".$key = $jq_value" > ai-office/state.json.tmp
-
-    if [[ $? -eq 0 ]]; then
+    if jq \
+        --argjson path "$path_json" \
+        --argjson value "$jq_value" \
+        'setpath($path; $value)' \
+        ai-office/state.json > ai-office/state.json.tmp; then
         mv ai-office/state.json.tmp ai-office/state.json
         log_success "State updated: $key"
     else
@@ -142,16 +279,23 @@ write_state() {
 append_to_state_array() {
     local array_key="$1"
     local new_item="$2"
+    local path_json=""
 
     if [[ ! -f "ai-office/state.json" ]]; then
         log_error "state.json not found"
         return 1
     fi
 
-    # Append to array using jq
-    jq ".$array_key += [$new_item]" ai-office/state.json > ai-office/state.json.tmp
+    if ! path_json=$(build_state_path_json "$array_key"); then
+        log_error "Failed to parse state path: $array_key"
+        return 1
+    fi
 
-    if [[ $? -eq 0 ]]; then
+    if jq \
+        --argjson path "$path_json" \
+        --argjson new_item "$new_item" \
+        'setpath($path; ((getpath($path) // []) + [$new_item]))' \
+        ai-office/state.json > ai-office/state.json.tmp; then
         mv ai-office/state.json.tmp ai-office/state.json
         log_success "Added item to $array_key"
     else
@@ -174,14 +318,12 @@ update_state_object() {
     fi
 
     # Update object field using jq
-    jq \
+    if jq \
         --arg object_key "$object_key" \
         --arg field "$field" \
         --arg value "$value" \
         '.[$object_key] = (.[$object_key] // {}) | .[$object_key][$field] = $value' \
-        ai-office/state.json > ai-office/state.json.tmp
-
-    if [[ $? -eq 0 ]]; then
+        ai-office/state.json > ai-office/state.json.tmp; then
         mv ai-office/state.json.tmp ai-office/state.json
         log_success "Updated $object_key.$field"
     else

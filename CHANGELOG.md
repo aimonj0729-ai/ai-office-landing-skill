@@ -10,6 +10,7 @@ All notable changes to AI Office Landing Skill will be documented in this file.
 - `SKILL.md` state-management examples now use the repository's helper functions (`ensure_state_initialized`, `mark_task_completed`, `add_pending_question`, `create_checkpoint`, etc.) instead of showing direct `jq` writes that no longer match the shipped scripts
 
 ### Fixed
+- `state-management.sh` now parses `read_state` / `write_state` / `append_to_state_array` keys into safe jq path arrays before calling `getpath` / `setpath`, so direct paths like `outputs_status.design-references` and bracket-quoted keys like `skills.loaded.designer["ai-office-landing"]` no longer abort unattended runs with jq compile errors
 - `state-management.sh` now passes freeform pending-question text, source names, and checkpoint text into `jq` via `--arg` / `--argjson`, so quotes inside conversational prompts no longer trigger compile errors or break `ai-office/state.json`
 - Removed stale `SKILL.md` snippets that still taught direct `jq ".$key = $value"` / `pending_questions[0]` / `outputs_status.$role` state writes, so the docs no longer point users back to patterns already fixed in `state-management.sh`
 - `setup-github-repo.sh` now points the no-`gh` manual publish fallback at the current local checkout instead of a hardcoded `/tmp/ai-office-landing` path, and it can also substitute `GITHUB_OWNER` / `REPO_OWNER` into the suggested `git remote add origin` command

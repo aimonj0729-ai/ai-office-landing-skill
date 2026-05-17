@@ -35,6 +35,35 @@
 
 <!-- github-autopilot:updates:start -->
 
+### 2026-05-17 09:45
+
+这次只做了一项小而完整的高置信度修复：加固了 [state-management.sh](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/state-management.sh)。我先复现到一个真实问题：`write_state "outputs_status.design-references" "completed"` 会因为把 key 直接拼进 `jq` 表达式而触发 compile error，并在 `set -e` 下直接中断无人值守流程。现在 `read_state`、`write_state` 和 `append_to_state_array` 都先把路径解析成安全的 jq path array，再调用 `getpath` / `setpath`，因此带连字符的 key 和 bracket 形式的字面 key 都能稳定工作。
+
+主 README 和变更记录也已同步更新到 [README.md](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md) 与 [CHANGELOG.md](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md)，README 里补充了新的使用说明：外部脚本直接写带点号的字面 key 时应使用 `outputs_status["brief.md"]` 这类 bracket 写法。
+
+已运行验证：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- 临时目录 smoke test：`write_state "outputs_status.design-references" "completed"`
+- 临时目录 smoke test：`write_state 'skills.loaded.designer["ai-office-landing"]' "true"`
+- 临时目录 smoke test：`write_state 'outputs_status["brief.md"]' "completed"`
+- 临时目录 smoke test：`append_to_state_array "pending_questions" '{"source":"critic","questions":["需要更短的 hero 文案"]}'`
+
+结果正常。未提交，未推送。
+
+### 2026-05-17 09:49
+
+这次只做了一项高置信度的脚本稳定性修复：把 [`state-management.sh`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/state-management.sh>) 里仍然直接把 state key 拼进 `jq` 表达式的几处通用入口补齐了。此前 `write_state "outputs_status.design-references" "completed"` 这类旧示例或外部自动化写法，在 macOS 默认 `bash` 下会稳定触发 `jq` compile error，并且因为脚本启用了 `set -e`，流程会直接中断。现在 `read_state`、`write_state` 和 `append_to_state_array` 都会先把路径解析成安全的 jq path array，再调用 `getpath` / `setpath`；像带连字符的 key，以及 `skills.loaded.designer["ai-office-landing"]` 这类带引号的字面 key，都不会再因为路径拼接而炸掉。
+
+这次改动只涉及 [`state-management.sh`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/state-management.sh>)、[`README.md`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md>) 和 [`CHANGELOG.md`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md>)。README 也同步补了一条使用说明：如果必须从外部脚本直接调 `write_state`，遇到带点号的字面 key 时请用 bracket 形式，例如 `outputs_status["brief.md"]`。
+
+已运行验证：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- 临时目录 smoke test：`write_state "outputs_status.design-references" "completed"` 后可成功写回状态
+- 临时目录 smoke test：`write_state 'skills.loaded.designer["ai-office-landing"]' "true"` 后可成功读取该值
+- 临时目录 smoke test：`append_to_state_array "pending_questions" '{"source":"critic","questions":["需要更短的 hero 文案"]}'`
+
+结果正常；未提交，未推送。
+
 ### 2026-05-14 17:47
 
 这次只做了一项小而完整的文档同步修复，重点是把过期的状态管理示例清掉，避免用户照着文档重新写回已经修过的坏模式。具体改动在 [SKILL.md](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/SKILL.md)、[README.md](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md) 和 [CHANGELOG.md](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md)。`SKILL.md` 里的 State Management、Recovery 和 Phase 3 Q&A 示例现在统一改为使用 `state-management.sh` 的 helper，比如 `ensure_state_initialized`、`get_current_phase`、`mark_task_completed`、`mark_task_waiting_for_user`、`add_pending_question` 和 `create_checkpoint`。README 也同步新增了这次更新说明，并补了一条明确建议：扩展工作流时优先复用这些 helper，不要手写 `jq` 去改 `state.json`。
@@ -453,6 +482,8 @@ export DEEPSEEK_API_KEY="your-key"
 `discover-skills.sh` 和 `orchestrator.sh` 现在只会在缺少 `ai-office/state.json` 时初始化状态；如果你正在用 `--resume` 继续一个进行中的项目，再次运行这些辅助脚本也不会把当前 phase、checkpoint 和输出状态清空。
 
 `state-management.sh` 现在也会按字面键名读写 `outputs_status` 和 `user_inputs`，并且对 `pending_questions` / checkpoint 里的自由文本改成了 `jq --arg` 安全写入；像 `design-references`、`brief.md` 这类带连字符或点号的真实任务 ID，以及 `用户说 "hero 文案" 需要更短` 这类带引号的问题文本，都不会再把状态写入流程搞坏。
+
+如果你需要从外部脚本直接调用通用入口，`read_state` / `write_state` / `append_to_state_array` 现在也支持安全的路径解析：`outputs_status.design-references` 这类带连字符的 path 已可直接使用；遇到带点号的字面 key 时，请写成 bracket 形式，例如 `outputs_status["brief.md"]` 或 `skills.loaded.designer["ai-office-landing"]`。
 
 如果你在扩展工作流、补示例或写自动化脚本，优先复用 `state-management.sh` 里的 helper（例如 `mark_task_completed`、`mark_task_waiting_for_user`、`add_pending_question`、`create_checkpoint`），不要再按旧思路手写 `jq` 去更新 `state.json`。
 
