@@ -35,6 +35,30 @@
 
 <!-- github-autopilot:updates:start -->
 
+### 2026-05-18 16:14
+
+修的是 `setup-github-repo.sh` 的一个高置信度发布回退问题。脚本在未安装 `gh` 时，原先让用户去 GitHub 新建仓库时勾选 README、`.gitignore` 和 License，但下一步又让用户直接执行 `git push -u origin main`；这会让远端先有初始提交，首次 push 很容易被 non-fast-forward 拒绝。现在我把回退说明改成“创建空仓库，不要预填 README / `.gitignore` / License”，并补了一句明确解释原因。改动在 [setup-github-repo.sh](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/setup-github-repo.sh)、[README.md](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md) 和 [CHANGELOG.md](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md)。
+
+我还同步更新了主 README：顶部新增了这次自动改进记录，发布说明处也补上了“手动建仓库时保持为空”的注意事项，用户从仓库首页就能直接看到这次修复。
+
+已运行验证：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- `env PATH=/usr/bin:/bin GITHUB_OWNER=stub-owner bash ./setup-github-repo.sh`
+
+结果正常：语法检查通过；无 `gh` 时的回退输出现在明确要求创建空仓库，并保留带真实 owner 的远程地址示例。未提交，未推送。
+
+### 2026-05-18 16:40
+
+这次只做了一项高置信度的发布回退修复：调整了 [`setup-github-repo.sh`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/setup-github-repo.sh>) 在机器未安装 `gh` 时打印的手动发布步骤。此前回退说明要求用户在 GitHub 新建仓库页面勾选 README、`.gitignore` 和 License，但下一步又让用户直接执行 `git push -u origin main`；这样远端会先有一个初始提交，首次 push 很容易因为 non-fast-forward 被拒，和脚本给出的回退路径本身冲突。
+
+现在这段说明改成了“创建空仓库，不要预填 README / `.gitignore` / License”，并明确解释原因：如果先让 GitHub 生成初始提交，直接 push 往往会失败。主 README 和 [`CHANGELOG.md`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md>) 已同步记录这次修复，方便用户直接从仓库首页看到这个发布注意事项。
+
+已运行验证：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- `env PATH=/usr/bin:/bin GITHUB_OWNER=stub-owner bash ./setup-github-repo.sh`
+
+结果正常：无 `gh` 回退输出现在明确要求创建空仓库，并保留带真实 owner 的远程地址示例。未提交，未推送。
+
 ### 2026-05-17 09:45
 
 这次只做了一项小而完整的高置信度修复：加固了 [state-management.sh](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/state-management.sh)。我先复现到一个真实问题：`write_state "outputs_status.design-references" "completed"` 会因为把 key 直接拼进 `jq` 表达式而触发 compile error，并在 `set -e` 下直接中断无人值守流程。现在 `read_state`、`write_state` 和 `append_to_state_array` 都先把路径解析成安全的 jq path array，再调用 `getpath` / `setpath`，因此带连字符的 key 和 bracket 形式的字面 key 都能稳定工作。
@@ -510,7 +534,7 @@ cd ai-office-landing-skill-main
 
 如果你使用 `./setup-github-repo.sh` 发布自己的仓库，脚本现在也会在发布成功后直接打印带真实 GitHub owner 的 tarball 和 `git clone` 安装命令，便于把可执行示例原样发给用户。
 
-如果当前机器还没装 `gh`，脚本输出的手动发布回退步骤现在也会直接指向当前 checkout；如先设置 `GITHUB_OWNER=your-name` 或 `REPO_OWNER=your-name`，回退说明里的 `git remote add origin` 也会自动带上真实 owner，减少手工替换。
+如果当前机器还没装 `gh`，脚本输出的手动发布回退步骤现在也会直接指向当前 checkout；如先设置 `GITHUB_OWNER=your-name` 或 `REPO_OWNER=your-name`，回退说明里的 `git remote add origin` 也会自动带上真实 owner，减少手工替换。手动创建 GitHub 仓库时请保持仓库为空，不要预先勾选 README、`.gitignore` 或 License，否则下一步直接 `git push -u origin main` 很容易因为远端已有初始提交而失败。
 
 ## 增强特性
 
