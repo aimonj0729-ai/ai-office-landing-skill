@@ -51,6 +51,53 @@ log_error() {
     exit 1
 }
 
+read_skill_name_from_dir() {
+    local skill_dir="$1"
+
+    if [[ -f "$skill_dir/NAME" ]]; then
+        tr -d '\r\n' < "$skill_dir/NAME"
+    else
+        basename "$skill_dir"
+    fi
+}
+
+emit_registry_skill_dirs() {
+    local registry_root="$1"
+    local skill_dir=""
+    local skill_doc=""
+
+    [[ -d "$registry_root" ]] || return 0
+
+    while IFS= read -r -d '' skill_doc; do
+        skill_dir="$(dirname "$skill_doc")"
+        if [[ -f "$skill_dir/NAME" || -f "$skill_dir/.claude-plugin/manifest.json" ]]; then
+            printf '%s\n' "$skill_dir"
+        fi
+    done < <(find "$registry_root" -mindepth 2 -maxdepth 2 -name "SKILL.md" -type f -print0 2>/dev/null)
+}
+
+# Emit the set of skill directories that should participate in discovery.
+# When running from an installed skill, scan the registry that contains it.
+# When running from a source checkout, include the current skill plus the
+# user's installed registry (if present) instead of arbitrary sibling repos.
+emit_known_skill_dirs() {
+    local parent_dir=""
+    local installed_registry="${HOME}/.claude/skills"
+
+    {
+        if [[ -f "$SKILL_ROOT/SKILL.md" ]]; then
+            printf '%s\n' "$SKILL_ROOT"
+        fi
+
+        parent_dir="$(cd "$SKILL_ROOT/.." && pwd)"
+        if [[ "$(basename "$parent_dir")" == "skills" ]]; then
+            emit_registry_skill_dirs "$parent_dir"
+        elif [[ -d "$installed_registry" ]]; then
+            emit_registry_skill_dirs "$installed_registry"
+        fi
+    } | awk '!seen[$0]++'
+}
+
 #=====================================
 # Core Discovery Functions
 #=====================================
@@ -58,22 +105,21 @@ log_error() {
 # Emit unique skill names whose docs mention the provided keyword.
 collect_skill_matches() {
     local keyword="$1"
-    local skills_root="${SKILL_ROOT}/../"
     local skill_file=""
     local skill_dir=""
     local skill_name=""
 
-    while IFS= read -r -d '' skill_file; do
-        if grep -q -i -- "$keyword" "$skill_file" 2>/dev/null; then
-            skill_dir="$(dirname "$skill_file")"
-            if [[ -f "$skill_dir/NAME" ]]; then
-                skill_name="$(tr -d '\r\n' < "$skill_dir/NAME")"
-            else
-                skill_name="$(basename "$skill_dir")"
+    while IFS= read -r skill_dir; do
+        [[ -n "$skill_dir" ]] || continue
+
+        for skill_file in "$skill_dir/SKILL.md" "$skill_dir/README.md"; do
+            if [[ -f "$skill_file" ]] && grep -q -i -- "$keyword" "$skill_file" 2>/dev/null; then
+                skill_name="$(read_skill_name_from_dir "$skill_dir")"
+                printf '%s\n' "$skill_name"
+                break
             fi
-            printf '%s\n' "$skill_name"
-        fi
-    done < <(find "$skills_root" \( -name "SKILL.md" -o -name "README.md" \) -type f -print0 2>/dev/null) | sort -u
+        done
+    done < <(emit_known_skill_dirs) | sort -u
 }
 
 has_array_value() {
@@ -94,17 +140,17 @@ has_array_value() {
 # contain spaces (common in temp checkouts or synced desktop folders).
 find_skill_dir_by_name() {
     local target_skill="$1"
-    local skills_root="${SKILL_ROOT}/../"
-    local name_file=""
     local candidate_skill=""
+    local skill_dir=""
 
-    while IFS= read -r -d '' name_file; do
-        candidate_skill="$(tr -d '\r\n' < "$name_file")"
+    while IFS= read -r skill_dir; do
+        [[ -n "$skill_dir" ]] || continue
+        candidate_skill="$(read_skill_name_from_dir "$skill_dir")"
         if [[ "$candidate_skill" == "$target_skill" ]]; then
-            dirname "$name_file"
+            printf '%s\n' "$skill_dir"
             return 0
         fi
-    done < <(find "$skills_root" -maxdepth 2 -name "NAME" -type f -print0 2>/dev/null)
+    done < <(emit_known_skill_dirs)
 
     return 1
 }
@@ -114,7 +160,6 @@ find_skill_dir_by_name() {
 discover_skills() {
     local keyword="$1"
     local category="${2:-all}"
-    local skills_root="${SKILL_ROOT}/../"
     local skill_name=""
     local unique_matches=()
 
@@ -343,21 +388,29 @@ suggest_skills_for_task() {
 
 # Cache skill registry for fast lookup
 cache_skill_registry() {
-    local skills_root="${SKILL_ROOT}/../"
     local cache_file="${SKILL_ROOT}/.skill-registry.cache"
+    local skill_dir=""
+    local skill_name=""
+    local has_prompts=""
+    local has_assets=""
+    local has_templates=""
+    local cached_names=()
 
     log "缓存 skill registry..."
 
-    # Find all skills
-    find "$skills_root" -maxdepth 2 -name "NAME" -type f 2>/dev/null | while read -r name_file; do
-        local skill_dir=$(dirname "$name_file")
-        local skill_name=$(cat "$name_file" 2>/dev/null || echo "unknown")
-        local has_prompts=$([[ -d "$skill_dir/prompts" ]] && echo "yes" || echo "no")
-        local has_assets=$([[ -d "$skill_dir/assets" ]] && echo "yes" || echo "no")
-        local has_templates=$([[ -d "$skill_dir/templates" ]] && echo "yes" || echo "no")
+    while IFS= read -r skill_dir; do
+        [[ -n "$skill_dir" ]] || continue
+        skill_name="$(read_skill_name_from_dir "$skill_dir")"
+        if has_array_value "$skill_name" "${cached_names[@]}"; then
+            continue
+        fi
+        cached_names+=("$skill_name")
+        has_prompts=$([[ -d "$skill_dir/prompts" ]] && echo "yes" || echo "no")
+        has_assets=$([[ -d "$skill_dir/assets" ]] && echo "yes" || echo "no")
+        has_templates=$([[ -d "$skill_dir/templates" ]] && echo "yes" || echo "no")
 
         echo "$skill_name|$skill_dir|$has_prompts|$has_assets|$has_templates"
-    done > "$cache_file"
+    done < <(emit_known_skill_dirs) > "$cache_file"
 
     log_success "已缓存 $(wc -l < "$cache_file") 个 skills"
     return 0

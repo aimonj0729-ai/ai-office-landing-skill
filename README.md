@@ -35,6 +35,36 @@
 
 <!-- github-autopilot:updates:start -->
 
+### 2026-05-19 15:48
+
+收紧了 `discover-skills.sh` 的发现边界，修掉了一个高置信度误报：源码 checkout 下运行 discovery 时，脚本原先会扫父目录里的 `README.md` / `SKILL.md`，把并排的其他仓库也当成候选 skill。现在发现逻辑只看当前 skill 和已知的 Claude skill 注册目录，并且 `info` / `load` 会优先命中当前 checkout，不再先落到旧安装副本。[discover-skills.sh](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/discover-skills.sh:54) [discover-skills.sh](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/discover-skills.sh:141) [discover-skills.sh](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/discover-skills.sh:390)
+
+README 和 changelog 已同步，顶部新增了这次自动改进记录，也在动态 Skill 发现说明里补清了“源码目录运行时不会扫描整个父目录”的行为。[README.md](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:38) [README.md](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:583) [CHANGELOG.md](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md:12)
+
+已运行验证：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- `bash ./discover-skills.sh discover design`
+- `bash ./discover-skills.sh info ai-office-landing`
+- `bash ./discover-skills.sh cache`
+- `bash ./discover-skills.sh auto-designer`
+
+结果正常：`discover design` 不再误报隔壁仓库，`info ai-office-landing` 返回当前 checkout 的 `2.4.0`。未提交，未推送。
+
+### 2026-05-19 15:48
+
+这次只做了一项高置信度的脚本发现链路修复：收紧了 [`discover-skills.sh`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/discover-skills.sh>) 的扫描范围。此前脚本在源码 checkout 下会直接扫父目录里的 `README.md` / `SKILL.md`，当前这种多仓库并排的工作目录里，很容易把隔壁仓库误报成可用 skill；`info` / `load` 还可能优先命中 `~/.claude/skills` 里的旧安装副本，而不是当前正在修改的 checkout。
+
+现在 discovery 只会查看“当前 skill + 已知的 Claude skill 注册目录”，不再把任意 sibling repo 当成候选项；同名 skill 存在多个副本时，也会优先解析当前 checkout。主 README 的动态 Skill 发现说明已同步补充，明确源码目录运行时不会再扫整个父目录；[`CHANGELOG.md`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md>) 也已记录这次修复。
+
+已运行验证：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- `bash ./discover-skills.sh discover design`
+- `bash ./discover-skills.sh info ai-office-landing`
+- `bash ./discover-skills.sh cache`
+- `bash ./discover-skills.sh auto-designer`
+
+结果正常：`discover design` 不再误报隔壁仓库；`info ai-office-landing` 现在优先返回当前 checkout 的 `2.4.0`；registry cache 也不再把当前 skill 和旧安装副本重复列成两个候选。未提交，未推送。
+
 ### 2026-05-18 16:14
 
 修的是 `setup-github-repo.sh` 的一个高置信度发布回退问题。脚本在未安装 `gh` 时，原先让用户去 GitHub 新建仓库时勾选 README、`.gitignore` 和 License，但下一步又让用户直接执行 `git push -u origin main`；这会让远端先有初始提交，首次 push 很容易被 non-fast-forward 拒绝。现在我把回退说明改成“创建空仓库，不要预填 README / `.gitignore` / License”，并补了一句明确解释原因。改动在 [setup-github-repo.sh](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/setup-github-repo.sh)、[README.md](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md) 和 [CHANGELOG.md](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md)。
@@ -564,6 +594,8 @@ Designer Agent 可自动发现相关 skills：
 `auto-designer` 现在会自动去重候选项，并跳过当前 `ai-office-landing` skill 自身，避免把内置 skill 误当作外部参考重复加载。
 
 `discover-skills.sh info` 和 `load` 现在也支持 skill 根目录、工作树或临时 checkout 路径中包含空格的场景，并且不会再因为 `ai-office-landing` 这类带连字符的 skill 名在状态写入时失败。
+
+从源码 checkout 直接运行 discovery 时，脚本现在只会检查当前 skill 和已知的 Claude skill 注册目录，不会再把父目录里并排的其他仓库误识别成候选 skill。
 
 ### 3. 智能决策支持
 - **Skill 加载**: 自动将相关 skill 内容加载到 Agent 上下文
