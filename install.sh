@@ -99,14 +99,57 @@ validate_claude_settings() {
     fi
 }
 
+INSTALL_HEALTH_STATUS="unknown"
+INSTALL_HEALTH_MESSAGE=""
+INSTALL_HEALTH_VERSION=""
+
+assess_installed_skill() {
+    local manifest_path="${INSTALL_DIR}/.claude-plugin/manifest.json"
+    local version=""
+
+    INSTALL_HEALTH_STATUS="missing"
+    INSTALL_HEALTH_MESSAGE="未安装"
+    INSTALL_HEALTH_VERSION=""
+
+    if [[ ! -d "$INSTALL_DIR" ]]; then
+        return 1
+    fi
+
+    if [[ ! -f "$manifest_path" ]]; then
+        INSTALL_HEALTH_STATUS="broken"
+        INSTALL_HEALTH_MESSAGE="检测到安装目录存在，但缺少 ${manifest_path}。这通常表示之前的安装中断了。"
+        return 1
+    fi
+
+    if ! jq -e '.' "$manifest_path" >/dev/null 2>&1; then
+        INSTALL_HEALTH_STATUS="broken"
+        INSTALL_HEALTH_MESSAGE="检测到安装目录存在，但 manifest.json 不是有效 JSON。"
+        return 1
+    fi
+
+    version=$(jq -r '.version // empty' "$manifest_path" 2>/dev/null)
+    if [[ -z "$version" ]]; then
+        INSTALL_HEALTH_STATUS="broken"
+        INSTALL_HEALTH_MESSAGE="检测到安装目录存在，但 manifest.json 缺少 version 字段。"
+        return 1
+    fi
+
+    INSTALL_HEALTH_STATUS="ok"
+    INSTALL_HEALTH_MESSAGE="已安装: ${SKILL_NAME} v${version}"
+    INSTALL_HEALTH_VERSION="$version"
+    return 0
+}
+
 # Check if skill already exists
 check_existing() {
     if [[ -d "$INSTALL_DIR" ]]; then
         warn "发现已存在的 ${SKILL_NAME} skill"
 
-        if [[ -f "${INSTALL_DIR}/.claude-plugin/manifest.json" ]]; then
-            EXISTING_VERSION=$(jq -r '.version' "${INSTALL_DIR}/.claude-plugin/manifest.json")
-            log "现有版本: v${EXISTING_VERSION}"
+        if assess_installed_skill; then
+            log "现有版本: v${INSTALL_HEALTH_VERSION}"
+        else
+            warn "${INSTALL_HEALTH_MESSAGE}"
+            warn "将备份当前目录并执行一次完整重装"
         fi
 
         if [[ "$FORCE_INSTALL" == "true" ]]; then
@@ -360,7 +403,7 @@ print_cli_help() {
     echo "  install     - 安装技能 (默认)"
     echo "  uninstall   - 卸载技能并清理 Claude Code 注册"
     echo "  reinstall   - 重新安装"
-    echo "  check       - 检查是否已安装"
+    echo "  check       - 检查是否已健康安装（未安装或损坏时返回非零）"
     echo ""
     echo "选项:"
     echo "  --force, --yes, -y  - 已存在安装时跳过交互确认并覆盖安装"
@@ -446,11 +489,16 @@ case "$COMMAND" in
         "$0" install --force
         ;;
     check)
-        if [[ -d "$INSTALL_DIR" ]]; then
-            VERSION=$(jq -r '.version' "${INSTALL_DIR}/.claude-plugin/manifest.json")
-            success "已安装: ${SKILL_NAME} v${VERSION}"
+        if assess_installed_skill; then
+            success "${INSTALL_HEALTH_MESSAGE}"
         else
-            warn "未安装"
+            warn "${INSTALL_HEALTH_MESSAGE}"
+            if [[ "$INSTALL_HEALTH_STATUS" == "missing" ]]; then
+                echo "运行 '$0 install' 进行安装。"
+            else
+                echo "运行 '$0 reinstall --force' 进行修复。"
+            fi
+            exit 1
         fi
         ;;
     *)

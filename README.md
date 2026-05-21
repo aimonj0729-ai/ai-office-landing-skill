@@ -35,6 +35,37 @@
 
 <!-- github-autopilot:updates:start -->
 
+### 2026-05-21 10:11
+
+这次只做了一项高置信度改进：把 [`install.sh`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/install.sh:106>) 的 `check` 子命令改成了真正可用于无人值守自动化的健康检查。之前它在“未安装”时仍返回成功，而安装目录残缺或 `manifest.json` 损坏时又会直接抛原始 `jq` 错误；现在会统一走健康评估逻辑，在 [`install.sh`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/install.sh:143>) 和 [`install.sh`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/install.sh:491>) 对缺失安装、半安装、损坏 manifest 给出明确提示，并在这些场景返回非零。CLI help 也同步说明了 `check` 的语义。
+
+README 和变更记录已同步更新，仓库首页现在直接写明 `./install.sh check` 只有在安装完整且 manifest 可解析时才返回 `0`，相关说明在 [`README.md`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:38>)、[`README.md`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:561>) 和 [`CHANGELOG.md`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md:12>)。
+
+验证已跑：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- 临时 `HOME` 下 `bash ./install.sh check`：未安装时返回 `1` 并提示 `install`
+- 临时 `HOME` 下残缺安装目录：返回 `1` 并提示 `reinstall --force`
+- 临时 `HOME` 下损坏 `manifest.json`：返回 `1` 并提示 `reinstall --force`
+- 临时 `HOME` 下 `bash ./install.sh install` 后再 `bash ./install.sh check`：返回 `0`
+- 临时 `HOME` 下损坏安装后执行 `bash ./install.sh install --force`，再 `check`：返回 `0`
+
+未提交，未推送。
+
+### 2026-05-21 10:32
+
+这次只做了一项高置信度的安装检查修复：把 [`install.sh`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/install.sh>) 的 `check` 子命令改成了真正可用于无人值守脚本的健康检查。此前 `./install.sh check` 在未安装时仍会返回成功，而安装目录只要残缺或 `manifest.json` 损坏，又会直接抛原始 `jq` 错误；这让 CI、发布脚本或本地自动化很难可靠判断 skill 是否真的处于可用状态。
+
+现在 `check` 只有在安装目录存在且 `.claude-plugin/manifest.json` 可正常解析出版本号时才会返回 `0`；未安装、缺少 manifest、manifest 不是有效 JSON，都会返回非零，并分别给出 `install` 或 `reinstall --force` 的明确修复提示。README 和 [`CHANGELOG.md`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md>) 已同步记录，仓库首页现在也直接写清了这个检查语义。
+
+已运行验证：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- 临时 `HOME` smoke test：`bash ./install.sh check` 在未安装时返回非零并提示 `install`
+- 临时 `HOME` smoke test：残缺安装目录下 `bash ./install.sh check` 返回非零并提示 `reinstall --force`
+- 临时 `HOME` smoke test：损坏的 `manifest.json` 下 `bash ./install.sh check` 返回非零并提示 `reinstall --force`
+- 临时 `HOME` smoke test：`bash ./install.sh install` 后再执行 `bash ./install.sh check`，返回 `0` 并输出 `v2.4.0`
+
+结果正常。未提交，未推送。
+
 ### 2026-05-19 15:48
 
 收紧了 `discover-skills.sh` 的发现边界，修掉了一个高置信度误报：源码 checkout 下运行 discovery 时，脚本原先会扫父目录里的 `README.md` / `SKILL.md`，把并排的其他仓库也当成候选 skill。现在发现逻辑只看当前 skill 和已知的 Claude skill 注册目录，并且 `info` / `load` 会优先命中当前 checkout，不再先落到旧安装副本。[discover-skills.sh](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/discover-skills.sh:54) [discover-skills.sh](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/discover-skills.sh:141) [discover-skills.sh](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/discover-skills.sh:390)
@@ -542,6 +573,8 @@ export DEEPSEEK_API_KEY="your-key"
 如果你在扩展工作流、补示例或写自动化脚本，优先复用 `state-management.sh` 里的 helper（例如 `mark_task_completed`、`mark_task_waiting_for_user`、`add_pending_question`、`create_checkpoint`），不要再按旧思路手写 `jq` 去更新 `state.json`。
 
 如果你在 CI、自动化脚本或其他无人值守环境里重复安装这个 skill，直接运行 `./install.sh install --force` 即可跳过覆盖确认；如果目标目录已存在但未传 `--force`，安装脚本会快速失败并提示正确用法，而不会卡在交互输入上。
+
+如果你需要在自动化里确认安装是否真的健康，运行 `./install.sh check`。它现在只有在安装目录存在且 `.claude-plugin/manifest.json` 完整可解析时才返回 `0`；未安装、缺少 manifest 或 manifest 损坏都会返回非零，并明确提示下一步应该执行 `install` 还是 `reinstall --force`。
 
 运行 `./install.sh uninstall` 时，脚本也会同步从 `~/.claude/settings.json` 删除 `ai-office-landing` 的注册，避免卸载后保留一个指向已删除 `SKILL.md` 的失效路径；如果你之前手动删过安装目录，也可以再跑一次 `uninstall` 来清理这条残留配置。
 

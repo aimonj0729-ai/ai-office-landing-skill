@@ -10,6 +10,7 @@ All notable changes to AI Office Landing Skill will be documented in this file.
 - `SKILL.md` state-management examples now use the repository's helper functions (`ensure_state_initialized`, `mark_task_completed`, `add_pending_question`, `create_checkpoint`, etc.) instead of showing direct `jq` writes that no longer match the shipped scripts
 
 ### Fixed
+- `install.sh check` now works as a real unattended health check: it returns non-zero when the skill is missing, partially installed, or has a broken `.claude-plugin/manifest.json`, and it prints actionable `install` / `reinstall --force` guidance instead of raw `jq` errors
 - `discover-skills.sh` no longer scans arbitrary sibling repositories when run from a source checkout; discovery now stays inside the current skill plus known Claude skill registries, and `info` / `load` prefer the current checkout over an older installed copy with the same name
 - `setup-github-repo.sh` now tells the no-`gh` manual publish fallback to create an empty GitHub repository instead of pre-populating README / `.gitignore` / LICENSE, so the follow-up `git push -u origin main` no longer points users at a non-fast-forward first push
 - `state-management.sh` now parses `read_state` / `write_state` / `append_to_state_array` keys into safe jq path arrays before calling `getpath` / `setpath`, so direct paths like `outputs_status.design-references` and bracket-quoted keys like `skills.loaded.designer["ai-office-landing"]` no longer abort unattended runs with jq compile errors
