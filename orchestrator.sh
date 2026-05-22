@@ -43,13 +43,21 @@ log_error() {
 # Get file size
 file_size() {
     local file="$1"
-    wc -c < "$file" 2>/dev/null || echo 0
+    if [[ -f "$file" ]]; then
+        wc -c < "$file"
+    else
+        echo 0
+    fi
 }
 
 # Get line count
 line_count() {
     local file="$1"
-    wc -l < "$file" 2>/dev/null || echo 0
+    if [[ -f "$file" ]]; then
+        wc -l < "$file"
+    else
+        echo 0
+    fi
 }
 
 # Count grep matches without emitting duplicate zeroes when grep exits 1.
@@ -106,6 +114,8 @@ check_execution_status() {
     local file=""
     local agent=""
     local path=""
+    local completed=0
+    local total_expected=${#expected_outputs[@]}
 
     for entry in "${expected_outputs[@]}"; do
         file="${entry%%:*}"
@@ -116,6 +126,7 @@ check_execution_status() {
             local size=$(file_size "$path")
             local lines=$(line_count "$path")
             statuses+=("✓ $agent: $file ($lines lines, $size bytes)")
+            completed=$((completed + 1))
         else
             statuses+=("✗ $agent: $file (MISSING)")
         fi
@@ -133,11 +144,9 @@ check_execution_status() {
     done
     echo ""
 
-    # Count completed
-    local completed=$(printf "%s\n" "${statuses[@]}" | grep -c "✓" || echo 0)
-    log "完成度: $completed/4 Executors"
+    log "完成度: $completed/$total_expected Executors"
 
-    return $((4 - completed))
+    return $((total_expected - completed))
 }
 
 # Generate progress dashboard
@@ -466,12 +475,12 @@ generate_metrics() {
 - Sections: $(grep_count "^## " "$copy_file")
 
 **代码指标:**
-- Lines of code: $(wc -l < "$html_file" 2>/dev/null || echo 0)
-- File size: $(wc -c < "$html_file" 2>/dev/null || echo 0) bytes
+- Lines of code: $(line_count "$html_file")
+- File size: $(file_size "$html_file") bytes
 - Components: $(grep_count "class=" "$html_file")
 
 **性能估算:**
-- Page weight: $(wc -c < "$html_file" 2>/dev/null || echo 0) bytes (without images)
+- Page weight: $(file_size "$html_file") bytes (without images)
 - Lighthouse (预估): 90+ (good structure)
 - Accessibility: Check contrast ratios manually
 
@@ -487,12 +496,17 @@ generate_orchestrator_summary() {
     log "开始生成 Orchestrator 汇总..."
 
     local output_file="ai-office/outputs/orchestrator-summary.md"
+    local missing_outputs=0
 
     # Check if outputs exist
-    check_execution_status
-    if [[ $? -gt 0 ]]; then
-        log_warn "部分输出文件缺失，生成部分汇总..."
+    if check_execution_status; then
+        missing_outputs=0
+    else
+        missing_outputs=$?
+        log_warn "检测到 ${missing_outputs} 个缺失输出，继续生成部分汇总..."
     fi
+
+    mkdir -p "$(dirname "$output_file")"
 
     # Generate summary
     cat > "$output_file" << EOF
@@ -505,7 +519,7 @@ generate_orchestrator_summary() {
 
 **完成度**: $(get_completion_percentage)/100%
 **总工作量**: 4 Executors
-**状态**: 所有 Agent 已完成工作
+**状态**: $(get_overall_status)
 
 **主要交付物**:
 $(list_all_deliverables)
@@ -568,8 +582,20 @@ EOF
 
 # Get completion percentage
 get_completion_percentage() {
-    local completed=$(check_execution_status >/dev/null 2>&1; echo $?)
-    echo $(((4 - completed) * 25))
+    local missing_outputs=0
+    check_execution_status >/dev/null 2>&1 || missing_outputs=$?
+    echo $(((4 - missing_outputs) * 25))
+}
+
+get_overall_status() {
+    local completion
+    completion=$(get_completion_percentage)
+
+    if [[ "$completion" -eq 100 ]]; then
+        echo "所有 Agent 已完成工作"
+    else
+        echo "部分输出缺失，已生成部分汇总"
+    fi
 }
 
 # List all deliverables
@@ -579,12 +605,12 @@ list_all_deliverables() {
     for file in "$outputs_dir"/*.md; do
         if [[ -f "$file" ]]; then
             local name=$(basename "$file" .md)
-            echo "- ✓ $(basename $file): $(wc -c < "$file" || echo 0) bytes"
+            echo "- ✓ $(basename $file): $(file_size "$file") bytes"
         fi
     done
 
     if [[ -f "$outputs_dir/index.html" ]]; then
-        echo "- ✓ index.html: $(wc -c < "$outputs_dir/index.html" || echo 0) bytes"
+        echo "- ✓ index.html: $(file_size "$outputs_dir/index.html") bytes"
     fi
 }
 
@@ -641,7 +667,9 @@ run_orchestrator() {
     generate_orchestrator_summary
 
     # Check if we should proceed
-    should_proceed_to_phase_4
+    if ! should_proceed_to_phase_4; then
+        log_warn "已生成汇总，但建议先补齐缺失输出后再进入 Phase 4"
+    fi
 
     # Save state
     save_orchestrator_state

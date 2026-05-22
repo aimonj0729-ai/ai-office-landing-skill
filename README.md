@@ -35,6 +35,33 @@
 
 <!-- github-autopilot:updates:start -->
 
+### 2026-05-22 09:45
+
+修了一项高置信度的 Orchestrator 稳定性问题：当 `copy.md` / `design-spec.md` / `index.html` / `meta.md` 缺失时，[orchestrator.sh](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/orchestrator.sh:102) 之前会因为 `set -e` 和 `0/4` 完成度计数错误直接中断，和“生成部分汇总”的文档承诺不一致。现在它会继续生成部分汇总、补建 `ai-office/outputs/`、把状态文案改成“部分输出缺失，已生成部分汇总”，并把 “是否进入 Phase 4” 降级为 warning，不再把整次汇总当成失败。[orchestrator.sh](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/orchestrator.sh:495) [orchestrator.sh](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/orchestrator.sh:583) [orchestrator.sh](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/orchestrator.sh:654)
+
+README 和变更记录已同步更新，用户现在可以直接从首页看到这次修复和 Phase 3.5 的降级行为说明。[README.md](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:38) [README.md](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:617) [CHANGELOG.md](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md:12)
+
+验证已跑：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- 临时目录 smoke test：只放 `orchestrator.sh` 和 `state-management.sh`，不提供任何 Executor 输出，`bash ./orchestrator.sh` 返回 `0`
+- 同一 smoke test 中确认成功生成 `ai-office/outputs/orchestrator-summary.md`，且 stderr 为空
+
+未提交，未推送。
+
+### 2026-05-22 09:55
+
+这次只做了一项高置信度的 Orchestrator 稳定性修复：[`orchestrator.sh`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/orchestrator.sh>) 之前虽然声明“部分输出文件缺失也会生成部分汇总”，但实际在 `set -e` 下只要缺少任一 `copy.md` / `design-spec.md` / `index.html` / `meta.md`，`check_execution_status()` 返回非零后脚本就会提前退出。与此同时，完成度统计在 `0/4` 场景还会拼出 `0
+0`，进一步触发算术错误。
+
+现在缺失输出时会明确打印 warning 并继续生成 `ai-office/outputs/orchestrator-summary.md`；汇总里的状态文案也会改成“部分输出缺失，已生成部分汇总”，不再错误声称所有 Agent 已完成。README 和 [`CHANGELOG.md`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md>) 已同步记录，仓库首页现在直接写清了 Phase 3.5 的降级行为。
+
+已运行验证：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- 临时目录 smoke test：只复制 `orchestrator.sh` 和 `state-management.sh`，不放任何 Executor 输出，执行 `bash ./orchestrator.sh` 后成功生成 `ai-office/outputs/orchestrator-summary.md`
+- 上述 smoke test 中确认脚本返回 `0`，stdout 包含“检测到 4 个缺失输出，继续生成部分汇总”
+
+未提交，未推送。
+
 ### 2026-05-21 10:11
 
 这次只做了一项高置信度改进：把 [`install.sh`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/install.sh:106>) 的 `check` 子命令改成了真正可用于无人值守自动化的健康检查。之前它在“未安装”时仍返回成功，而安装目录残缺或 `manifest.json` 损坏时又会直接抛原始 `jq` 错误；现在会统一走健康评估逻辑，在 [`install.sh`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/install.sh:143>) 和 [`install.sh`](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/install.sh:491>) 对缺失安装、半安装、损坏 manifest 给出明确提示，并在这些场景返回非零。CLI help 也同步说明了 `check` 的语义。
@@ -609,6 +636,8 @@ cd ai-office-landing-skill-main
 - ✅ 整合说明和依赖关系
 - ✅ 关键决策记录
 - ✅ 项目指标和性能估算
+
+如果 `copy.md`、`design-spec.md`、`index.html`、`meta.md` 里有缺失项，`orchestrator.sh` 现在会明确提示缺了几个输出，并继续生成部分汇总，而不是在中途直接退出；这样自动化流程可以先看到缺口，再决定是否回到 Phase 3 补跑对应 Agent。
 
 ### 2. 动态 Skill 发现
 Designer Agent 可自动发现相关 skills：
