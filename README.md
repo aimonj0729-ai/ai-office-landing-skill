@@ -1,4 +1,30 @@
-# AI Office Landing Skill - v2.4
+# 🧭 AI Office Landing Skill
+
+<div align="center">
+
+**把一场混乱的需求会，变成一套能交付的 Landing Page 协作流水线。**
+
+`Living Brief` → `多智能体分工` → `设计/文案/前端/SEO` → `Critic 审查` → `可发布页面`
+
+![Claude Code](https://img.shields.io/badge/Claude%20Code-Skill-191919?style=flat-square)
+![Landing Page](https://img.shields.io/badge/Landing%20Page-workflow-0f766e?style=flat-square)
+![Multi Agent](https://img.shields.io/badge/Multi--Agent-office-c86b3c?style=flat-square)
+
+</div>
+
+> **一句话介绍**
+> 这是一个面向 Claude Code 的 AI 办公室 Skill：用 Living Brief 作为单一事实源，调度 Designer、Copywriter、Frontend、SEO、Critic 等角色，把模糊需求稳定推进到可交付页面。
+>
+> **它像什么？** 像一个会开会、会追任务、会省预算、还会在最后挑刺的 Landing Page 作战室。
+
+## 🪄 Repo 气质卡
+
+| 场景 | 它给你的不是 |
+| --- | --- |
+| `客户说：要高级、要年轻、要转化` | 一句“好的我懂了”，而是结构化 brief 和任务拆分 |
+| `设计、文案、前端各说各话` | 跨 Agent 汇总、冲突提示和交付检查 |
+| `Claude Pro 快到额度墙` | Kimi/DeepSeek 成本节省路由 |
+| `Meme 状态` | `需求会：一锅粥` → `Skill：端成一份可上线菜单` |
 
 **版本**: v2.4.0  
 **发布日期**: 2026-04-12  
