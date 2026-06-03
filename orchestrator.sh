@@ -368,20 +368,18 @@ EOF
 identify_gaps() {
     local outputs_dir="$1"
     local gap_count=0
+    local file=""
+    local gap_lines=""
 
-    # Check for GAP markers
-    local gaps=$(find "$outputs_dir" -name "*.md" -exec grep -l "GAP\|QUESTION" {} \; 2>/dev/null || echo "")
-
-    if [[ -n "$gaps" ]]; then
-        for file in $gaps; do
-            local gap_lines=$(grep -n "GAP\|QUESTION" "$file" 2>/dev/null || echo "")
-            if [[ -n "$gap_lines" ]]; then
-                echo "- $(basename $file):"
-                echo "$gap_lines" | head -3 | sed 's/^/  /'
-                gap_count=$((gap_count + 1))
-            fi
-        done
-    fi
+    # Check for GAP markers without splitting paths that contain spaces.
+    while IFS= read -r -d '' file; do
+        gap_lines=$(grep -n "GAP\|QUESTION" "$file" 2>/dev/null || true)
+        if [[ -n "$gap_lines" ]]; then
+            echo "- $(basename "$file"):"
+            echo "$gap_lines" | head -3 | sed 's/^/  /'
+            gap_count=$((gap_count + 1))
+        fi
+    done < <(find "$outputs_dir" -name "*.md" -type f -print0 2>/dev/null)
 
     if [[ $gap_count -eq 0 ]]; then
         echo "✓ 未发现信息缺口"
@@ -605,7 +603,7 @@ list_all_deliverables() {
     for file in "$outputs_dir"/*.md; do
         if [[ -f "$file" ]]; then
             local name=$(basename "$file" .md)
-            echo "- ✓ $(basename $file): $(file_size "$file") bytes"
+            echo "- ✓ $(basename "$file"): $(file_size "$file") bytes"
         fi
     done
 

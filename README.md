@@ -302,6 +302,20 @@ MIT - 详见 LICENSE 文件
 
 <!-- github-autopilot:updates:start -->
 
+### 2026-06-03 09:38
+
+已完成一项小而完整的脚本可靠性改进，未提交、未推送。
+
+改动：
+- [orchestrator.sh](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/orchestrator.sh>) 修复 GAP/QUESTION 扫描逻辑，改为用 null-delimited `find` 流读取 Markdown 文件，避免路径或文件名包含空格时被误拆。
+- 同步修正交付物列表里的 `basename` 引用问题。
+- [README.md](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md>) 文末自动更新附录已记录本次改动。
+
+验证：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- 临时目录 smoke test：创建 `ai-office/outputs/design notes.md`，确认 `orchestrator.sh` 能在汇总报告中正确列出带空格文件名。
+- `git diff --check` 通过。
+
 ### 2026-05-22 09:45
 
 修了一项高置信度的 Orchestrator 稳定性问题：当 `copy.md` / `design-spec.md` / `index.html` / `meta.md` 缺失时，[orchestrator.sh](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/orchestrator.sh:102) 之前会因为 `set -e` 和 `0/4` 完成度计数错误直接中断，和“生成部分汇总”的文档承诺不一致。现在它会继续生成部分汇总、补建 `ai-office/outputs/`、把状态文案改成“部分输出缺失，已生成部分汇总”，并把 “是否进入 Phase 4” 降级为 warning，不再把整次汇总当成失败。[orchestrator.sh](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/orchestrator.sh:495) [orchestrator.sh](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/orchestrator.sh:583) [orchestrator.sh](/Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/orchestrator.sh:654)
@@ -829,6 +843,12 @@ README 和变更记录也已同步更新，用户可以直接在 [README.md](</U
 - 已修复 `cost-tracker.sh` 的初始化链路：当天限额字段会正确写入 `session-cost.json`，并能从 `~/.claude/cost-history.json` 恢复当日累计用量。
 - 成本追踪不再依赖 Bash 4 的关联数组；在 macOS 默认 Bash 3 环境下也能加载相位成本配置。
 - 如果系统没有安装 `numfmt`，成本面板现在会自动回退为原始数字显示，避免在 macOS 上因缺少 GNU coreutils 而报错。
+
+### 2026-06-03 00:00
+
+- 已修复 `orchestrator.sh` 的 GAP/QUESTION 扫描逻辑：现在使用 null-delimited `find` 流逐个读取 Markdown 输出文件，不会再因为路径或文件名包含空格而误拆。
+- 同步修正交付物列表里的 `basename` 调用引用，保持 Phase 3.5 汇总在带空格目录中也能稳定显示文件名。
+- 本次只做 Orchestrator 路径安全这一项小改进；未提交，未推送。
 
 ### 2026-04-23 22:05
 
