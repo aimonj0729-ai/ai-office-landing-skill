@@ -264,6 +264,8 @@ ls ~/.claude/skills/ai-office-landing/context/designer/
 
 `cost-tracker.sh` 现在会优先恢复 `~/.claude/cost-history.json` 里的当天累计用量，并在缺少 `numfmt` 的环境中自动退回为纯数字输出，适合直接在 macOS 默认 shell 环境下查看成本面板。
 
+如果你通过环境变量自定义 `CLAUDE_PRO_LIMIT`，`cost-tracker.sh` 现在会先校验它必须是正整数；空值、`0` 或非法值会回退到默认 `45000`，避免无人值守成本记录写出损坏的 JSON。成本数据库写入也改为安全 path 更新，`phase-3` 这类带连字符的 phase 标签不会再触发 `jq` 路径解析错误。
+
 ## 扩展指南
 
 ### 添加新 Skill
@@ -301,6 +303,38 @@ MIT - 详见 LICENSE 文件
 ## 附录：自动更新记录
 
 <!-- github-autopilot:updates:start -->
+
+### 2026-06-04 09:43
+
+已完成一项小改进，未提交、未推送。
+
+改动集中在成本追踪健壮性：
+- [cost-tracker.sh](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/cost-tracker.sh>)：校验 `CLAUDE_PRO_LIMIT` 必须是正整数，非法值或 `0` 回退到 `45000`；成本数据库读写改用 `jq getpath/setpath`，修复 `phase-3` 这类带连字符 key 导致的 jq 路径错误；统一走安全百分比计算。
+- [README.md](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md>)：同步成本追踪说明，并按要求把本次自动更新写入文末附录。
+- [CHANGELOG.md](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md>)：记录未发布修复。
+
+验证已通过：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- 逐文件 `bash -n`
+- `/bin/bash 3.2` 下的 smoke test
+- `CLAUDE_PRO_LIMIT=0` 回退并生成可解析 JSON
+- `record_actual_cost 3 1000 phase-3` 正确写入 `phase_breakdown["phase-3"]`
+- `git diff --check`
+
+### 2026-06-04 09:40
+
+已完成一项小而完整的成本追踪脚本健壮性改进，未提交、未推送。
+
+改动：
+- [cost-tracker.sh](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/cost-tracker.sh>) 现在会校验 `CLAUDE_PRO_LIMIT` 必须是正整数；非法值或 `0` 会回退到默认 `45000`，避免初始化成本数据库时写出无效 JSON。
+- 成本数据库读写改为 `jq getpath` / `setpath`，不再把 key 直接拼进 jq 表达式；`phase_breakdown.phase-3` 这类带连字符的 phase 名可正常记录。
+- [CHANGELOG.md](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md>) 已同步记录本次修复。
+
+验证：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- 临时目录 smoke test：`CLAUDE_PRO_LIMIT=0` 时初始化成本追踪并执行 `estimate_phase_cost 1`，确认限额回退为 `45000` 且 JSON 可解析。
+- 临时目录 smoke test：执行 `record_actual_cost 3 1000 phase-3`，确认 `ai-office/cost/session-cost.json` 正确写入 `phase_breakdown["phase-3"].tokens = 1000`。
+- `git diff --check` 通过。
 
 ### 2026-06-03 09:38
 

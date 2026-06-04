@@ -15,7 +15,8 @@ PURPLE='\033[0;35m'
 NC='\033[0m'
 
 # Claude Pro daily limit
-CLAUDE_PRO_LIMIT=${CLAUDE_PRO_LIMIT:-45000}
+DEFAULT_CLAUDE_PRO_LIMIT=45000
+CLAUDE_PRO_LIMIT=${CLAUDE_PRO_LIMIT:-$DEFAULT_CLAUDE_PRO_LIMIT}
 
 # Cost database paths
 COST_DB_PATH="ai-office/cost/session-cost.json"
@@ -37,6 +38,23 @@ log_error() {
 log_success() {
     echo -e "${GREEN}[OK]${NC} $1"
 }
+
+normalize_claude_pro_limit() {
+    local value="$1"
+
+    if [[ "$value" =~ ^[0-9]+$ ]]; then
+        if ((10#$value > 0)); then
+            printf '%s\n' "$((10#$value))"
+            return 0
+        fi
+    fi
+
+    printf "%b[WARN]%b CLAUDE_PRO_LIMIT 必须是正整数，已使用默认值 %s。\n" \
+        "$YELLOW" "$NC" "$DEFAULT_CLAUDE_PRO_LIMIT" >&2
+    printf '%s\n' "$DEFAULT_CLAUDE_PRO_LIMIT"
+}
+
+CLAUDE_PRO_LIMIT="$(normalize_claude_pro_limit "$CLAUDE_PRO_LIMIT")"
 
 # Format token counts for display; fall back to raw numbers on macOS systems
 # where GNU coreutils' numfmt is not installed.
@@ -63,18 +81,58 @@ get_phase_cost() {
     esac
 }
 
+build_cost_path_json() {
+    local key="$1"
+    local path_json='[]'
+    local segment=""
+    local IFS='.'
+    local -a segments=()
+
+    read -r -a segments <<< "$key"
+    if [[ ${#segments[@]} -eq 0 ]]; then
+        return 1
+    fi
+
+    for segment in "${segments[@]}"; do
+        if [[ -z "$segment" ]]; then
+            return 1
+        fi
+
+        if ! path_json=$(jq -c --arg segment "$segment" '. + [$segment]' <<< "$path_json"); then
+            return 1
+        fi
+    done
+
+    printf '%s\n' "$path_json"
+}
+
 # Read a value from the cost database.
 read_cost_db() {
     local key="$1"
     local default_value="${2:-}"
+    local path_json=""
+    local value=""
 
     if [[ ! -f "$COST_DB_PATH" ]]; then
         echo "$default_value"
         return
     fi
 
-    local value
-    value=$(jq -r ".$key // empty" "$COST_DB_PATH" 2>/dev/null)
+    if ! path_json=$(build_cost_path_json "$key"); then
+        echo "$default_value"
+        return
+    fi
+
+    if ! value=$(jq -r \
+        --argjson path "$path_json" \
+        'getpath($path) as $value
+        | if $value == null then empty
+          elif ($value | type) == "string" then $value
+          else ($value | tojson)
+          end' \
+        "$COST_DB_PATH" 2>/dev/null); then
+        value=""
+    fi
 
     if [[ -z "$value" ]]; then
         echo "$default_value"
@@ -169,23 +227,27 @@ EOF
 update_cost_db() {
     local key="$1"
     local value="$2"
+    local path_json=""
 
     if [[ ! -f "$COST_DB_PATH" ]]; then
         init_cost_tracking
     fi
 
-    # Read current state
-    local state
-    state=$(cat "$COST_DB_PATH")
+    if ! path_json=$(build_cost_path_json "$key"); then
+        log_error "Invalid cost db path: $key"
+        return 1
+    fi
 
-    # Update using jq
-    echo "$state" | jq ".$key = $value" > "${COST_DB_PATH}.tmp"
-
-    if [[ $? -eq 0 ]]; then
+    if jq \
+        --argjson path "$path_json" \
+        --argjson value "$value" \
+        'setpath($path; $value)' \
+        "$COST_DB_PATH" > "${COST_DB_PATH}.tmp"; then
         mv "${COST_DB_PATH}.tmp" "$COST_DB_PATH"
     else
         log_error "Failed to update cost db: $key"
         rm -f "${COST_DB_PATH}.tmp"
+        return 1
     fi
 }
 
@@ -220,8 +282,17 @@ get_usage_percentage() {
 generate_progress_bar() {
     local percentage="$1"
     local width=40
-    local filled=$((percentage * width / 100))
-    local empty=$((width - filled))
+    local filled
+    local empty
+
+    if [[ "$percentage" -lt 0 ]]; then
+        percentage=0
+    elif [[ "$percentage" -gt 100 ]]; then
+        percentage=100
+    fi
+
+    filled=$((percentage * width / 100))
+    empty=$((width - filled))
 
     local bar=""
     if [[ $percentage -le 60 ]]; then
@@ -276,7 +347,7 @@ estimate_phase_cost() {
     cost=$(get_phase_cost "$phase")
     current_usage=$(get_current_usage)
     projected_total=$((current_usage + cost))
-    percentage=$((projected_total * 100 / CLAUDE_PRO_LIMIT))
+    percentage=$(calculate_usage_percentage "$projected_total")
 
     log_cost "预估 Phase $phase 消耗: $(format_tokens "$cost") tokens"
     log_cost "预计总消耗: $(format_tokens "$projected_total") / $(format_tokens "$CLAUDE_PRO_LIMIT") ($percentage%)"
@@ -337,10 +408,12 @@ record_actual_cost() {
     local phase="$1"
     local actual_cost="$2"
     local phase_name="${3:-phase_$phase}"
+    local percentage_of_total
 
     # Update current session
     local current_usage=$(get_current_usage)
     local new_usage=$((current_usage + actual_cost))
+    percentage_of_total=$(calculate_usage_percentage "$actual_cost")
 
     sync_current_usage "$new_usage"
     update_cost_db "current_session.phase" "$phase"
@@ -350,7 +423,7 @@ record_actual_cost() {
         \"phase\": $phase,
         \"tokens\": $actual_cost,
         \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",
-        \"percentage_of_total\": $(($actual_cost * 100 / CLAUDE_PRO_LIMIT))
+        \"percentage_of_total\": $percentage_of_total
     }"
 
     # Log the update
@@ -448,17 +521,16 @@ save_daily_summary() {
     local used=$(get_current_usage)
     local current_data=$(cat "$summary_file")
 
-    echo "$current_data" | jq --arg today "$today" --arg last_updated "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --argjson used "$used" '
+    if echo "$current_data" | jq --arg today "$today" --arg last_updated "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --argjson used "$used" '
         .[$today] = {
             "claude": $used,
             "sessions": ((.[$today].sessions // 0) + 1),
             "last_updated": $last_updated
         }
-    ' > "$summary_file.tmp"
-
-    if [[ $? -eq 0 ]]; then
+    ' > "$summary_file.tmp"; then
         mv "$summary_file.tmp" "$summary_file"
     else
+        log_warn "无法更新成本历史，已跳过: $summary_file"
         rm -f "$summary_file.tmp"
     fi
 }
@@ -481,17 +553,19 @@ display_daily_history() {
         local date=$(date -d "$i days ago" +%Y-%m-%d 2>/dev/null || date -v-"$i"d +%Y-%m-%d)
         local usage
         local sessions
+        local usage_percentage
 
         usage=$(jq -r --arg day "$date" '.[$day].claude // 0' "$summary_file" 2>/dev/null || echo 0)
         sessions=$(jq -r --arg day "$date" '.[$day].sessions // 0' "$summary_file" 2>/dev/null || echo 0)
 
         if [[ $usage -gt 0 ]]; then
-            local bar=$(generate_progress_bar $((usage * 100 / CLAUDE_PRO_LIMIT)))
+            usage_percentage=$(calculate_usage_percentage "$usage")
+            local bar=$(generate_progress_bar "$usage_percentage")
             printf "  %s: %s tokens %s %d%% (%d 会话)\n" \
                 "$date" \
                 "$(format_tokens "$usage")" \
                 "$bar" \
-                $((usage * 100 / CLAUDE_PRO_LIMIT)) \
+                "$usage_percentage" \
                 "$sessions"
         else
             printf "  %s: 无数据\n" "$date"
@@ -508,8 +582,7 @@ display_daily_history() {
 # Apply cost saving measures for a phase
 apply_cost_saving_mode() {
     local phase="$1"
-    local current_usage=$(get_current_usage)
-    local remaining=$((CLAUDE_PRO_LIMIT - current_usage))
+    local remaining=$(get_remaining_tokens)
 
     log_cost "启用成本节省模式（剩余: $(format_tokens "$remaining")）"
 
@@ -570,13 +643,15 @@ should_warn_about_cost() {
     local cost
     local current_usage
     local projected_total
+    local percentage
 
     cost=$(get_phase_cost "$phase")
     current_usage=$(get_current_usage)
     projected_total=$((current_usage + cost))
+    percentage=$(calculate_usage_percentage "$projected_total")
 
     # Warn if projected total exceeds 80%
-    if [[ $((projected_total * 100 / CLAUDE_PRO_LIMIT)) -gt 80 ]]; then
+    if [[ "$percentage" -gt 80 ]]; then
         return 0
     fi
 
