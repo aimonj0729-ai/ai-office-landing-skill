@@ -304,6 +304,33 @@ MIT - 详见 LICENSE 文件
 
 <!-- github-autopilot:updates:start -->
 
+### 2026-06-05 10:53
+
+已完成，未提交、未推送。
+
+修复了 [state-management.sh](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/state-management.sh:347>) 里 `init_state` 的项目名初始化：现在会正确引用 `basename "$PWD"`，并用 `jq -R` 写入 JSON 字符串。这样从带空格路径直接初始化，或传入带引号的项目名时，不会再生成损坏的 `ai-office/state.json`。
+
+同步更新了 [CHANGELOG.md](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md:13>) 和 README 文末自动更新附录 [README.md](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:307>)。
+
+验证已通过：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- 带空格临时目录下 `source ./state-management.sh; init_state`，确认 JSON 可解析且 `project_name` 完整
+- `init_state 'demo "quoted" project'`，确认带引号项目名正确写入
+- `git diff --check`
+
+### 2026-06-05 10:52
+
+已完成一项小而完整的状态初始化稳定性修复，未提交、未推送。
+
+改动：
+- [state-management.sh](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/state-management.sh>)：`init_state` 默认项目名现在使用带引号的 `basename "$PWD"`，并通过 `jq -R` 写入 JSON 字符串，避免在带空格 checkout 路径或带引号项目名下生成无效的 `ai-office/state.json`。
+- [CHANGELOG.md](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md>)：同步记录本次未发布修复。
+
+验证：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- 临时带空格目录 smoke test：`source ./state-management.sh; init_state` 后 `ai-office/state.json` 可被 `jq` 正常解析，且 `project_name` 保留完整目录名。
+- 临时目录 smoke test：`init_state 'demo "quoted" project'` 后 `project_name` 正确写入带引号文本。
+
 ### 2026-06-04 09:43
 
 已完成一项小改进，未提交、未推送。

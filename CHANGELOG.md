@@ -10,6 +10,7 @@ All notable changes to AI Office Landing Skill will be documented in this file.
 - `SKILL.md` state-management examples now use the repository's helper functions (`ensure_state_initialized`, `mark_task_completed`, `add_pending_question`, `create_checkpoint`, etc.) instead of showing direct `jq` writes that no longer match the shipped scripts
 
 ### Fixed
+- `state-management.sh` now quotes and JSON-escapes the default project name during `init_state`, so direct initialization from checkout paths containing spaces or project names containing quotes no longer writes invalid `ai-office/state.json`
 - `cost-tracker.sh` now validates `CLAUDE_PRO_LIMIT`, uses safe jq path updates for cost database keys, and avoids direct limit division so invalid limits or phase labels like `phase-3` no longer abort cost recording
 - `orchestrator.sh` now degrades cleanly when one or more Phase 3 outputs are missing: it warns, keeps generating `orchestrator-summary.md`, and reports a partial status instead of aborting under `set -e` or tripping over a `0/4` completion-count arithmetic error
 - `install.sh check` now works as a real unattended health check: it returns non-zero when the skill is missing, partially installed, or has a broken `.claude-plugin/manifest.json`, and it prints actionable `install` / `reinstall --force` guidance instead of raw `jq` errors

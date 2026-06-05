@@ -345,7 +345,10 @@ get_current_task() {
 
 # Initialize state for new session (v2.1 with Phase 0 support)
 init_state() {
-    local project_name="${1:-$(basename $PWD)}"
+    local project_name="${1:-$(basename "$PWD")}"
+    local project_name_json
+
+    project_name_json=$(printf '%s' "$project_name" | jq -R .)
 
     mkdir -p ai-office
 
@@ -355,7 +358,7 @@ init_state() {
   "current_phase": 0,
   "current_task": 0,
   "session_start": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "project_name": "${project_name}",
+  "project_name": ${project_name_json},
   "checkpoint": {
     "phase": 0,
     "task": 0,
