@@ -58,6 +58,22 @@ read_manifest_version() {
 SKILL_VERSION="$(read_manifest_version)"
 SKILL_SHORT_VERSION="${SKILL_VERSION%.*}"
 
+validate_install_source() {
+    local current_dir_physical=""
+    local install_dir_physical=""
+
+    if [[ ! -d "$INSTALL_DIR" ]]; then
+        return 0
+    fi
+
+    current_dir_physical="$(cd "$CURRENT_DIR" && pwd -P)"
+    install_dir_physical="$(cd "$INSTALL_DIR" && pwd -P)"
+
+    if [[ "$current_dir_physical" == "$install_dir_physical" ]]; then
+        error "不能从最终安装目录运行安装器: ${INSTALL_DIR}。请从临时 checkout 或其他源码目录运行 ./install.sh。原目录未被修改。"
+    fi
+}
+
 # Check requirements
 check_requirements() {
     log "检查系统要求..."
@@ -462,6 +478,12 @@ main() {
 
 # Handle command line arguments
 parse_args "$@"
+
+case "$COMMAND" in
+    install|reinstall)
+        validate_install_source
+        ;;
+esac
 
 case "$COMMAND" in
     install)

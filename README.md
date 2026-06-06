@@ -95,7 +95,7 @@ export DEEPSEEK_API_KEY="your-key"
 
 不要直接执行仓库 raw 链接里的 `install.sh`。这个安装器会读取同目录下的 `.claude-plugin/manifest.json`、`prompts/`、`templates/` 和其他资源文件，必须先拿到完整仓库副本后再运行。
 
-也不要先把仓库解压或克隆到最终安装目录 `~/.claude/skills/ai-office-landing` 再执行安装器。`install.sh` 会把当前 checkout 复制到该目录，所以推荐始终从一个临时 checkout 里运行它。
+也不要先把仓库解压或克隆到最终安装目录 `~/.claude/skills/ai-office-landing` 再执行安装器。`install.sh install` 和 `reinstall` 现在会在移动、删除或复制文件前拒绝这种自覆盖安装，并保持原目录不变；请始终从临时 checkout 或其他源码目录运行安装器。
 
 如果你想保留 `curl` 下载体验，请先下载完整仓库到临时目录，再从 checkout 里安装：
 
@@ -303,6 +303,32 @@ MIT - 详见 LICENSE 文件
 ## 附录：自动更新记录
 
 <!-- github-autopilot:updates:start -->
+
+### 2026-06-06 17:39
+
+修复了安装器自覆盖问题：[install.sh](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/install.sh:61) 现在会在任何移动、删除前拒绝从最终安装目录执行 `install` 或 `reinstall`。
+
+新增回归测试 [install-self-source.sh](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/tests/install-self-source.sh:1)，并同步更新 README 文末附录及 `CHANGELOG.md`。
+
+验证通过：
+
+- 指定的六个脚本 `bash -n`
+- 自覆盖回归测试
+- 临时 `HOME` 正常安装及 `install.sh check`
+- `git diff --check`
+
+未提交，未推送。
+
+### 2026-06-06 17:38
+
+修复了 `install.sh` 从最终安装目录自我覆盖时会破坏源码的问题。现在 `install` 和 `reinstall` 会先比较源码目录与 `~/.claude/skills/ai-office-landing` 的真实路径；如果两者相同，脚本会在备份、卸载或复制前失败，并提示改从临时 checkout 运行。
+
+新增 `tests/install-self-source.sh` 回归测试，覆盖 `install --force` 与 `reinstall --force`，确认拒绝后原目录完整且不会生成备份。本次改动同步记录于 `CHANGELOG.md`，未提交、未推送。
+
+验证：
+- `bash tests/install-self-source.sh`
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- `git diff --check`
 
 ### 2026-06-05 10:53
 
