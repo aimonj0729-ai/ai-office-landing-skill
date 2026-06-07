@@ -304,6 +304,24 @@ MIT - 详见 LICENSE 文件
 
 <!-- github-autopilot:updates:start -->
 
+### 2026-06-07 17:42
+
+完成一项发布脚本体验修复：
+
+- [setup-github-repo.sh](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/setup-github-repo.sh>) 权限改为 `100755`，可直接运行。
+- 新增 [权限回归测试](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/tests/setup-github-repo-executable.sh:1>)。
+- 同步更新 README 文末附录和 `CHANGELOG.md`。
+
+验证通过：指定六脚本 `bash -n`、全部 Shell 语法检查、两个回归测试、直接执行 smoke test、`git diff --check` 和秘密扫描。
+
+未提交，未推送。
+
+### 2026-06-07 17:38
+
+修复了发布脚本入口权限：`setup-github-repo.sh` 现在以可执行文件模式跟踪，新 checkout 可以直接运行 README 已记录的 `./setup-github-repo.sh`，不会再因缺少执行权限报 `Permission denied`。
+
+新增 `tests/setup-github-repo-executable.sh` 回归测试，用于检测后续提交是否意外丢失该入口的可执行位；本次改动也已同步记录到 `CHANGELOG.md`。
+
 ### 2026-06-06 17:39
 
 修复了安装器自覆盖问题：[install.sh](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/install.sh:61) 现在会在任何移动、删除前拒绝从最终安装目录执行 `install` 或 `reinstall`。
