@@ -22,6 +22,7 @@ Thank you for your interest in contributing to AI Office Landing! This document 
    cd examples
    ./test.sh
    ```
+   This check now returns non-zero when the installation is missing, stale, incomplete, or contains non-executable core scripts.
 
 ## 📋 Development Guidelines
 

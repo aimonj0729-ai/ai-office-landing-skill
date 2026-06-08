@@ -304,6 +304,24 @@ MIT - 详见 LICENSE 文件
 
 <!-- github-autopilot:updates:start -->
 
+### 2026-06-08 17:48
+
+完成一项安装验证改进：
+
+- [examples/test.sh](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/examples/test.sh>) 不再无条件成功，现会验证安装目录、版本、关键文件及执行权限。
+- 新增 [回归测试](</Users/aimon/Desktop/claude code test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/tests/examples-install-check.sh>)。
+- 已同步 README 文末附录、CHANGELOG 和 CONTRIBUTING。
+
+验证通过：指定六脚本 `bash -n`、全部 Shell 语法检查、3 个回归测试、临时 HOME 真实安装验证、`git diff --check` 和秘密扫描。
+
+未提交，未推送。
+
+### 2026-06-08
+
+修复了 `examples/test.sh` 的安装验证假阳性：脚本现在会检查真实安装目录、manifest 版本、关键文件以及核心脚本的可执行位；未安装、版本过旧或安装不完整时会返回非零并给出重装命令。
+
+新增 `tests/examples-install-check.sh` 回归测试，覆盖未安装、健康安装和关键文件缺失三种场景。本次改动同步记录到 `CHANGELOG.md` 和贡献指南。
+
 ### 2026-06-07 17:42
 
 完成一项发布脚本体验修复：
