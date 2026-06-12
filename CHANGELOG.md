@@ -10,6 +10,7 @@ All notable changes to AI Office Landing Skill will be documented in this file.
 - `SKILL.md` state-management examples now use the repository's helper functions (`ensure_state_initialized`, `mark_task_completed`, `add_pending_question`, `create_checkpoint`, etc.) instead of showing direct `jq` writes that no longer match the shipped scripts
 
 ### Fixed
+- `setup-github-repo.sh` now passes its own repository root to `gh repo create --source`, so invoking the publisher from another working directory cannot publish the wrong folder
 - `examples/test.sh` now validates the actual installed skill, manifest version, critical files, and executable core scripts instead of always printing a successful installation result
 - `setup-github-repo.sh` is now executable in fresh checkouts, so the documented `./setup-github-repo.sh` command no longer fails with `Permission denied`; a regression test now detects entrypoint mode regressions
 - `install.sh install` and `reinstall` now reject execution when the source checkout is already the final `~/.claude/skills/ai-office-landing` directory, before moving or deleting anything, so an unsafe self-install cannot leave a partial installation

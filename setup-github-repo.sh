@@ -67,7 +67,7 @@ echo "📚 创建 GitHub 仓库..."
 if ! gh repo create "$REPO_NAME" \
   --public \
   --description "$REPO_DESC" \
-  --source=. \
+  --source="$CURRENT_DIR" \
   --remote=origin \
   --push; then
     echo ""

@@ -304,6 +304,12 @@ MIT - 详见 LICENSE 文件
 
 <!-- github-autopilot:updates:start -->
 
+### 2026-06-12
+
+修复了 `setup-github-repo.sh` 的发布源目录：即使从其他工作目录调用脚本，`gh repo create` 现在也会明确发布脚本所在的仓库根目录，不会误把当前终端目录上传到 GitHub。
+
+新增 `tests/setup-github-repo-source.sh` 回归测试，覆盖从带空格的外部目录调用发布脚本的场景。
+
 ### 2026-06-08 17:48
 
 完成一项安装验证改进：
