@@ -506,9 +506,8 @@ case "$COMMAND" in
         success "已卸载"
         ;;
     reinstall)
-        "$0" uninstall
-        sleep 1
-        "$0" install --force
+        FORCE_INSTALL=true
+        main
         ;;
     check)
         if assess_installed_skill; then

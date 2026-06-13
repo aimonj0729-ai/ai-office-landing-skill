@@ -87,6 +87,8 @@ export DEEPSEEK_API_KEY="your-key"
 
 如果你在 CI、自动化脚本或其他无人值守环境里重复安装这个 skill，直接运行 `./install.sh install --force` 即可跳过覆盖确认；如果目标目录已存在但未传 `--force`，安装脚本会快速失败并提示正确用法，而不会卡在交互输入上。
 
+需要完整重装时可运行 `./install.sh reinstall --force`。重装现在会先把旧安装移动到带时间戳的 `.backup.*` 目录，再写入新版本；如果后续需要人工回退，旧文件仍然保留。
+
 如果你需要在自动化里确认安装是否真的健康，运行 `./install.sh check`。它现在只有在安装目录存在且 `.claude-plugin/manifest.json` 完整可解析时才返回 `0`；未安装、缺少 manifest 或 manifest 损坏都会返回非零，并明确提示下一步应该执行 `install` 还是 `reinstall --force`。
 
 运行 `./install.sh uninstall` 时，脚本也会同步从 `~/.claude/settings.json` 删除 `ai-office-landing` 的注册，避免卸载后保留一个指向已删除 `SKILL.md` 的失效路径；如果你之前手动删过安装目录，也可以再跑一次 `uninstall` 来清理这条残留配置。
@@ -303,6 +305,12 @@ MIT - 详见 LICENSE 文件
 ## 附录：自动更新记录
 
 <!-- github-autopilot:updates:start -->
+
+### 2026-06-13
+
+修复了 `install.sh reinstall` 先删除旧安装再开始复制的问题。重装现在复用安装器已有的安全备份流程：先把当前安装移动到带时间戳的 `.backup.*` 目录，再安装新版本，因此后续步骤失败时仍保留可人工恢复的旧文件。
+
+新增 `tests/install-reinstall-backup.sh`，在临时 `HOME` 中验证旧安装内容被完整保留且新安装可用；README 安装说明和 `CHANGELOG.md` 已同步更新。
 
 ### 2026-06-12
 
