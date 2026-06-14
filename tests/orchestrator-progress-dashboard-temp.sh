@@ -22,16 +22,19 @@ if [[ -f "$SHARED_TEMP_FILE" ]]; then
     HAD_SHARED_TEMP_FILE=true
 fi
 
-printf '%s\n' "preserve existing temp content" > "$SHARED_TEMP_FILE"
-
 dashboard_output="$(
     SKILL_ROOT="$REPO_ROOT"
     source "${REPO_ROOT}/orchestrator.sh"
     generate_progress_dashboard
 )"
 
-if [[ "$(cat "$SHARED_TEMP_FILE")" != "preserve existing temp content" ]]; then
+if [[ "$HAD_SHARED_TEMP_FILE" == "true" ]] && ! cmp -s "$BACKUP_FILE" "$SHARED_TEMP_FILE"; then
     echo "progress dashboard must not overwrite the shared /tmp/progress_table.md path" >&2
+    exit 1
+fi
+
+if [[ "$HAD_SHARED_TEMP_FILE" == "false" && -e "$SHARED_TEMP_FILE" ]]; then
+    echo "progress dashboard must not create the shared /tmp/progress_table.md path" >&2
     exit 1
 fi
 

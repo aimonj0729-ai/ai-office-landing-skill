@@ -326,7 +326,7 @@ MIT - 详见 LICENSE 文件
 
 修复了一项 Orchestrator 临时文件可靠性问题：`generate_progress_dashboard` 之前会固定覆盖 `/tmp/progress_table.md`，并发运行多个工作流时可能互相污染进度表，也可能改写用户或其他进程已有的同名文件。现在进度仪表板会直接输出 Markdown 表格，不再创建共享中间文件。
 
-新增 `tests/orchestrator-progress-dashboard-temp.sh` 回归测试，验证生成进度表不会触碰已有的 `/tmp/progress_table.md`，同时继续输出完整表头。本次未提交，未推送。
+新增 `tests/orchestrator-progress-dashboard-temp.sh` 回归测试，验证生成进度表不会触碰已有的 `/tmp/progress_table.md`，同时继续输出完整表头。测试自身只比较既有文件或确认路径保持不存在，不会为了建立断言而覆盖共享临时文件。本次未提交，未推送。
 
 ### 2026-06-13
 
