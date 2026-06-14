@@ -306,6 +306,28 @@ MIT - 详见 LICENSE 文件
 
 <!-- github-autopilot:updates:start -->
 
+### 2026-06-14 09:36
+
+修复了 `orchestrator.sh`：进度表改为直接输出，不再覆盖共享的 `/tmp/progress_table.md`，避免并发冲突。
+
+同步更新：
+- 新增回归测试 `tests/orchestrator-progress-dashboard-temp.sh`
+- 更新 `CHANGELOG.md`
+- 更新 README 文末自动更新附录
+
+验证通过：
+- 指定的六个脚本均通过 `bash -n`
+- `tests/*.sh` 全部通过
+- `git diff --check` 通过
+
+`examples/test.sh` 检测到本机已安装版本仍为 `2.3.0`，与源码 `2.4.0` 不符；这不是本次改动导致。未提交、未推送。
+
+### 2026-06-14
+
+修复了一项 Orchestrator 临时文件可靠性问题：`generate_progress_dashboard` 之前会固定覆盖 `/tmp/progress_table.md`，并发运行多个工作流时可能互相污染进度表，也可能改写用户或其他进程已有的同名文件。现在进度仪表板会直接输出 Markdown 表格，不再创建共享中间文件。
+
+新增 `tests/orchestrator-progress-dashboard-temp.sh` 回归测试，验证生成进度表不会触碰已有的 `/tmp/progress_table.md`，同时继续输出完整表头。本次未提交，未推送。
+
 ### 2026-06-13
 
 修复了 `install.sh reinstall` 先删除旧安装再开始复制的问题。重装现在复用安装器已有的安全备份流程：先把当前安装移动到带时间戳的 `.backup.*` 目录，再安装新版本，因此后续步骤失败时仍保留可人工恢复的旧文件。

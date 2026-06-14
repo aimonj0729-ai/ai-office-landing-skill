@@ -153,9 +153,7 @@ check_execution_status() {
 generate_progress_dashboard() {
     log "生成进度仪表板..."
 
-    local outputs_dir="ai-office/outputs"
-
-    cat > /tmp/progress_table.md << EOF
+    cat << EOF
 | Agent | Task | Status | Progress | Key Metrics |
 |---|---|---|---|---|
 $(generate_agent_row "copywriter" "copy.md" "文案" "4 sections, content generation")
@@ -163,8 +161,6 @@ $(generate_agent_row "designer" "design-spec.md" "设计规范" "layout, compone
 $(generate_agent_row "frontend" "index.html" "前端实现" "HTML/CSS/JS, responsive")
 $(generate_agent_row "seo" "meta.md" "SEO优化" "meta tags, schema.org")
 EOF
-
-    cat /tmp/progress_table.md
 }
 
 # Generate agent row for table
