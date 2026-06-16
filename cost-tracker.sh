@@ -228,6 +228,7 @@ update_cost_db() {
     local key="$1"
     local value="$2"
     local path_json=""
+    local value_is_json=false
 
     if [[ ! -f "$COST_DB_PATH" ]]; then
         init_cost_tracking
@@ -238,16 +239,34 @@ update_cost_db() {
         return 1
     fi
 
-    if jq \
-        --argjson path "$path_json" \
-        --argjson value "$value" \
-        'setpath($path; $value)' \
-        "$COST_DB_PATH" > "${COST_DB_PATH}.tmp"; then
-        mv "${COST_DB_PATH}.tmp" "$COST_DB_PATH"
+    if jq . >/dev/null 2>&1 <<< "$value"; then
+        value_is_json=true
+    fi
+
+    if [[ "$value_is_json" == "true" ]]; then
+        if jq \
+            --argjson path "$path_json" \
+            --argjson value "$value" \
+            'setpath($path; $value)' \
+            "$COST_DB_PATH" > "${COST_DB_PATH}.tmp"; then
+            mv "${COST_DB_PATH}.tmp" "$COST_DB_PATH"
+        else
+            log_error "Failed to update cost db: $key"
+            rm -f "${COST_DB_PATH}.tmp"
+            return 1
+        fi
     else
-        log_error "Failed to update cost db: $key"
-        rm -f "${COST_DB_PATH}.tmp"
-        return 1
+        if jq \
+            --argjson path "$path_json" \
+            --arg value "$value" \
+            'setpath($path; $value)' \
+            "$COST_DB_PATH" > "${COST_DB_PATH}.tmp"; then
+            mv "${COST_DB_PATH}.tmp" "$COST_DB_PATH"
+        else
+            log_error "Failed to update cost db: $key"
+            rm -f "${COST_DB_PATH}.tmp"
+            return 1
+        fi
     fi
 }
 

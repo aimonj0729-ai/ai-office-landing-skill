@@ -306,6 +306,36 @@ MIT - 详见 LICENSE 文件
 
 <!-- github-autopilot:updates:start -->
 
+### 2026-06-16 15:44
+
+已完成一项小而完整的改进，未提交、未推送。
+
+改动内容：
+- 修复 `cost-tracker.sh` 的 `update_cost_db`：现在会先判断传入值是否为合法 JSON。数字、对象等仍按原类型写入；普通文本会自动作为 JSON 字符串写入，避免外部自动化记录备注/状态时因为没手工转义而失败。
+- 新增回归测试 `tests/cost-tracker-string-write.sh`，覆盖普通字符串、数字和对象写入。
+- 同步更新 `CHANGELOG.md` 和 `README.md` 文末自动更新附录。
+
+验证已通过：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- `bash tests/cost-tracker-string-write.sh`
+- `for test_script in tests/*.sh; do bash "$test_script"; done`
+- `git diff --check`
+
+### 2026-06-16
+
+修复了 `cost-tracker.sh` 的通用成本数据库写入：`update_cost_db` 现在会先识别传入值是否为合法 JSON。数字和对象仍按原类型写入；普通文本会自动作为 JSON 字符串写入，方便外部自动化记录备注或状态字段时不用手工转义。
+
+同步更新：
+- 新增回归测试 `tests/cost-tracker-string-write.sh`
+- 更新 `CHANGELOG.md`
+- 更新 README 文末自动更新附录
+
+验证通过：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- `bash tests/cost-tracker-string-write.sh`
+
+未提交、未推送。
+
 ### 2026-06-14 09:36
 
 修复了 `orchestrator.sh`：进度表改为直接输出，不再覆盖共享的 `/tmp/progress_table.md`，避免并发冲突。
