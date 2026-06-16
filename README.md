@@ -308,7 +308,7 @@ MIT - 详见 LICENSE 文件
 
 ### 2026-06-16 15:44
 
-已完成一项小而完整的改进，未提交、未推送。
+已完成一项小而完整的改进，并已由 GitHub autopilot 自动提交推送到 `main`。
 
 改动内容：
 - 修复 `cost-tracker.sh` 的 `update_cost_db`：现在会先判断传入值是否为合法 JSON。数字、对象等仍按原类型写入；普通文本会自动作为 JSON 字符串写入，避免外部自动化记录备注/状态时因为没手工转义而失败。
@@ -334,7 +334,7 @@ MIT - 详见 LICENSE 文件
 - `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
 - `bash tests/cost-tracker-string-write.sh`
 
-未提交、未推送。
+随后由 GitHub autopilot 自动提交并推送到 `main`。
 
 ### 2026-06-14 09:36
 
