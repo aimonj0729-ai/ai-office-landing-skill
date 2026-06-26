@@ -313,9 +313,9 @@ MIT - 详见 LICENSE 文件
 已完成一项小而完整的改进，已由 GitHub autopilot 在验证后自动发布。
 
 改动内容：
-- 在 [discover-skills.sh](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/discover-skills.sh:54) 增加参数校验，`discover`、`info`、`load`、`suggest` 缺少必填参数时会返回非零并打印具体用法。
-- 新增 [tests/discover-skills-args.sh](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/tests/discover-skills-args.sh:1)，覆盖缺参时不会落入 `Skill '' 不存在` 的误导性查询。
-- 同步更新 [README.md](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:250) 使用说明和文末自动更新附录，以及 [CHANGELOG.md](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md:13)。
+- 在 `discover-skills.sh` 增加参数校验，`discover`、`info`、`load`、`suggest` 缺少必填参数时会返回非零并打印具体用法。
+- 新增 `tests/discover-skills-args.sh`，覆盖缺参时不会落入 `Skill '' 不存在` 的误导性查询。
+- 同步更新 `README.md` 使用说明和文末自动更新附录，以及 `CHANGELOG.md`。
 
 验证已通过：
 - `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
