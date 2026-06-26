@@ -51,6 +51,26 @@ log_error() {
     exit 1
 }
 
+usage_error() {
+    echo -e "${RED}✗${NC} $1" >&2
+    echo "Usage: $0 $2" >&2
+    return 1
+}
+
+require_args() {
+    local command_name="$1"
+    local usage="$2"
+    local min_args="$3"
+    shift 3
+
+    if [[ $# -lt "$min_args" ]]; then
+        usage_error "缺少 ${command_name} 参数" "$usage"
+        return 1
+    fi
+
+    return 0
+}
+
 read_skill_name_from_dir() {
     local skill_dir="$1"
 
@@ -449,14 +469,17 @@ run_skill_discovery() {
     case "$command" in
         discover)
             shift
+            require_args "discover" "discover <keyword> [category]" 1 "$@" || return 1
             discover_skills "$@"
             ;;
         info)
             shift
+            require_args "info" "info <skill-name>" 1 "$@" || return 1
             get_skill_info "$@"
             ;;
         load)
             shift
+            require_args "load" "load <agent> <skill-name>" 2 "$@" || return 1
             load_skill_for_agent "$@"
             ;;
         auto-designer)
@@ -464,6 +487,7 @@ run_skill_discovery() {
             ;;
         suggest)
             shift
+            require_args "suggest" "suggest <task-desc> [agent]" 1 "$@" || return 1
             suggest_skills_for_task "$@"
             ;;
         cache)

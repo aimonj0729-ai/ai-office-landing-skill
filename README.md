@@ -247,6 +247,8 @@ orchestrator.sh
 ls ~/.claude/skills/ai-office-landing/context/designer/
 ```
 
+`discover-skills.sh discover`、`info`、`load` 和 `suggest` 现在会先校验必填参数；无人值守脚本漏传 keyword、skill name 或 agent name 时会直接返回非零并打印对应用法，不会再继续执行空 skill 查询。
+
 ## 性能与成本
 
 **预计 Token 消耗:**
@@ -305,6 +307,34 @@ MIT - 详见 LICENSE 文件
 ## 附录：自动更新记录
 
 <!-- github-autopilot:updates:start -->
+
+### 2026-06-26 11:30
+
+已完成一项小而完整的改进，已由 GitHub autopilot 在验证后自动发布。
+
+改动内容：
+- 在 [discover-skills.sh](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/discover-skills.sh:54) 增加参数校验，`discover`、`info`、`load`、`suggest` 缺少必填参数时会返回非零并打印具体用法。
+- 新增 [tests/discover-skills-args.sh](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/tests/discover-skills-args.sh:1)，覆盖缺参时不会落入 `Skill '' 不存在` 的误导性查询。
+- 同步更新 [README.md](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/README.md:250) 使用说明和文末自动更新附录，以及 [CHANGELOG.md](/Users/aimon/Desktop/claude%20code%20test/.cache/github-autopilot/repos/aimonj0729-ai__ai-office-landing-skill/CHANGELOG.md:13)。
+
+验证已通过：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- `bash tests/discover-skills-args.sh`
+- `for test_script in tests/*.sh; do bash "$test_script"; done`
+- `git diff --check`
+
+### 2026-06-26
+
+修复了 `discover-skills.sh` 的缺参体验：`discover`、`info`、`load` 和 `suggest` 现在会在入口处校验必填参数，漏传时返回非零并打印具体用法，避免自动化日志里只看到 `Skill '' 不存在` 这类误导信息。
+
+同步更新：
+- 新增 `tests/discover-skills-args.sh` 回归测试
+- 更新 `CHANGELOG.md`
+- 更新 README 使用说明和文末自动更新附录
+
+验证通过：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- `bash tests/discover-skills-args.sh`
 
 ### 2026-06-16 15:44
 
