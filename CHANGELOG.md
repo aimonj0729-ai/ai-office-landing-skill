@@ -10,6 +10,7 @@ All notable changes to AI Office Landing Skill will be documented in this file.
 - `SKILL.md` state-management examples now use the repository's helper functions (`ensure_state_initialized`, `mark_task_completed`, `add_pending_question`, `create_checkpoint`, etc.) instead of showing direct `jq` writes that no longer match the shipped scripts
 
 ### Fixed
+- `install.sh` now copies and verifies `LICENSE`, so the installed README's license reference no longer points to a missing file in `~/.claude/skills/ai-office-landing`.
 - `discover-skills.sh` now validates required arguments for `discover`, `info`, `load`, and `suggest` before dispatching, so unattended runs get a clear usage error instead of falling through to confusing empty skill lookups.
 - `cost-tracker.sh` now falls back to JSON string writes when `update_cost_db` receives plain text, while preserving existing numeric/object writes; this makes the helper safer for external automation that records notes or status fields.
 - `orchestrator.sh` now renders the progress dashboard directly instead of overwriting the shared `/tmp/progress_table.md` path, preventing concurrent runs from corrupting each other's intermediate output or clobbering an existing file

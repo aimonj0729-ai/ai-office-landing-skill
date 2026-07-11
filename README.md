@@ -308,6 +308,32 @@ MIT - 详见 LICENSE 文件
 
 <!-- github-autopilot:updates:start -->
 
+### 2026-07-11 09:40
+
+已完成一项小而完整的安装一致性修复，已由 GitHub autopilot 在验证后自动发布。
+
+改动：
+- install.sh 现在会复制并校验 `LICENSE`，避免安装后的 README 引用缺失文件。
+- tests/install-reinstall-backup.sh 增加回归断言，确保安装后包含 `LICENSE`。
+- 同步更新 CHANGELOG.md 和 README 文末自动更新附录。
+
+验证已通过：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- `bash tests/install-reinstall-backup.sh`
+- `git diff --check`
+
+### 2026-07-11
+
+修复了安装目录中的许可证文件缺失问题：`install.sh` 现在会复制并校验 `LICENSE`，因此安装后的 README 里“MIT - 详见 LICENSE 文件”的引用不再指向缺失文件。
+
+同步更新：
+- 更新 `CHANGELOG.md`
+- 扩展 `tests/install-reinstall-backup.sh`，覆盖安装后必须包含 `LICENSE`
+
+验证通过：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- `bash tests/install-reinstall-backup.sh`
+
 ### 2026-06-26 11:30
 
 已完成一项小而完整的改进，已由 GitHub autopilot 在验证后自动发布。

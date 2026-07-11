@@ -204,6 +204,7 @@ install_skill() {
     # Root files
     cp -r "${CURRENT_DIR}/SKILL.md" "$INSTALL_DIR/" 2>/dev/null || true
     cp -r "${CURRENT_DIR}/README.md" "$INSTALL_DIR/" 2>/dev/null || true
+    cp -r "${CURRENT_DIR}/LICENSE" "$INSTALL_DIR/" 2>/dev/null || true
     cp -r "${CURRENT_DIR}/NAME" "$INSTALL_DIR/" 2>/dev/null || true
     cp -r "${CURRENT_DIR}/interview.md" "$INSTALL_DIR/" 2>/dev/null || true
     cp -r "${CURRENT_DIR}/critic-checklist.md" "$INSTALL_DIR/" 2>/dev/null || true
@@ -229,6 +230,7 @@ verify_installation() {
     CRITICAL_FILES=(
         "SKILL.md"
         "README.md"
+        "LICENSE"
         ".claude-plugin/manifest.json"
         ".claude-plugin/hooks.json"
         "interview.md"

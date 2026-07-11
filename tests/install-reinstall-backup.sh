@@ -36,4 +36,9 @@ if [[ ! -f "${INSTALL_DIR}/SKILL.md" || ! -f "${INSTALL_DIR}/.claude-plugin/mani
     exit 1
 fi
 
+if [[ ! -f "${INSTALL_DIR}/LICENSE" ]]; then
+    echo "install should copy LICENSE because the installed README references it" >&2
+    exit 1
+fi
+
 echo "install reinstall backup: PASS"
