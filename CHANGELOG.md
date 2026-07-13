@@ -5,6 +5,7 @@ All notable changes to AI Office Landing Skill will be documented in this file.
 ## [Unreleased]
 
 ### Changed
+- Claude Code autocomplete metadata and the installed `examples/workflow-demo.sh` now expose the v2.4 `--cost-saving` and `--adapter <name>` options, keeping the generated examples aligned with the documented adapter router.
 - `install.sh` now accepts `--force` / `--yes` / `-y` for unattended reinstall flows, and it fails fast with guidance instead of waiting for interactive input when a previous install already exists
 - `setup-github-repo.sh` now emits install examples that run `install.sh` from a temporary full repo checkout instead of a raw single-file script or the final install directory, and the README now documents the same constraint
 - `SKILL.md` state-management examples now use the repository's helper functions (`ensure_state_initialized`, `mark_task_completed`, `add_pending_question`, `create_checkpoint`, etc.) instead of showing direct `jq` writes that no longer match the shipped scripts

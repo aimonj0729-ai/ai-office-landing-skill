@@ -264,7 +264,10 @@ ls ~/.claude/skills/ai-office-landing/context/designer/
 **优化建议:**
 - 使用 `--serial` 分摊到多天
 - 使用 `--human` 跳过 Critic
-- 启用成本节省模式: `export COST_SAVING_MODE=true`
+- 启用成本节省模式: `export COST_SAVING_MODE=true` 或 `/landing --cost-saving`
+- 需要调试 adapter 时，可以用 `/landing --adapter deepseek-api` 这类显式参数固定 Executor 路由
+
+安装后生成的 `examples/workflow-demo.sh` 也会展示 `--cost-saving` 和 `--adapter <name>` 示例；Claude Code 的 `/landing` autocomplete 配置同步包含这两个 v2.4 参数，避免新用户只看到旧的 v2.3 参数集。
 
 `cost-tracker.sh` 现在会优先恢复 `~/.claude/cost-history.json` 里的当天累计用量，并在缺少 `numfmt` 的环境中自动退回为纯数字输出，适合直接在 macOS 默认 shell 环境下查看成本面板。
 
@@ -307,6 +310,23 @@ MIT - 详见 LICENSE 文件
 ## 附录：自动更新记录
 
 <!-- github-autopilot:updates:start -->
+
+### 2026-07-13 09:36
+
+已完成一项小而完整的改进，已由 GitHub autopilot 在验证后自动发布。
+
+改动内容：
+- 在 `.claude-plugin/hooks.json` 的 `/landing` autocomplete 中补上 v2.4 参数：`--cost-saving` 和 `--adapter <name>`。
+- 更新 `install.sh` 生成的 `examples/workflow-demo.sh`，让安装后的示例也展示 Kimi/DeepSeek 成本节省路由和强制 adapter 用法。
+- 同步更新 `README.md` 的性能与成本说明，以及 `CHANGELOG.md` 的 Unreleased 记录。
+- 新增 `tests/hooks-cost-saving-autocomplete.sh`，防止 autocomplete 和安装示例再次漏掉这两个参数。
+
+验证已通过：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- `bash -n ... tests/hooks-cost-saving-autocomplete.sh`
+- `bash tests/hooks-cost-saving-autocomplete.sh`
+- 临时 `HOME` 下执行 `./install.sh install --force`，确认生成示例包含新参数
+- `for test_script in tests/*.sh; do bash "$test_script"; done` 全部通过
 
 ### 2026-07-11 09:40
 

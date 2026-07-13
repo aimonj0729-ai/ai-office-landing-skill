@@ -31,6 +31,14 @@
           "description": "人工 Critic 审查（节省成本）"
         },
         {
+          "option": "--cost-saving",
+          "description": "启用 Kimi/DeepSeek 成本节省路由"
+        },
+        {
+          "option": "--adapter <name>",
+          "description": "强制 Executor 使用指定 adapter"
+        },
+        {
           "option": "--skip-phase-0",
           "description": "跳过 Phase 0（设计研究阶段）"
         },
