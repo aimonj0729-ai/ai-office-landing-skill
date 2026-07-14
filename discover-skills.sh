@@ -81,6 +81,19 @@ read_skill_name_from_dir() {
     fi
 }
 
+directory_has_entries() {
+    local dir_path="$1"
+    local entry=""
+
+    [[ -d "$dir_path" ]] || return 1
+
+    while IFS= read -r -d '' entry; do
+        return 0
+    done < <(find "$dir_path" -mindepth 1 -maxdepth 1 -print0 2>/dev/null)
+
+    return 1
+}
+
 emit_registry_skill_dirs() {
     local registry_root="$1"
     local skill_dir=""
@@ -244,7 +257,7 @@ get_skill_info() {
     if [[ -f "$skill_dir/prompts/designer.md" ]]; then
         echo "Has Designer prompt: ✓"
     fi
-    if [[ -f "$skill_dir/assets/"* ]]; then
+    if directory_has_entries "$skill_dir/assets"; then
         echo "Has assets: ✓"
     fi
 

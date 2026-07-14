@@ -147,6 +147,8 @@ Designer Agent 可自动发现相关 skills：
 
 从源码 checkout 直接运行 discovery 时，脚本现在只会检查当前 skill 和已知的 Claude skill 注册目录，不会再把父目录里并排的其他仓库误识别成候选 skill。
 
+`discover-skills.sh info` 现在会按 `assets/` 目录是否非空来展示资源状态；即使某个外部 skill 带有多个 asset 文件，也会正确输出 `Has assets: ✓`。
+
 ### 3. 智能决策支持
 - **Skill 加载**: 自动将相关 skill 内容加载到 Agent 上下文
 - **引用参考**: 在 design-spec.md 中引用 skill 提供的洞察
@@ -310,6 +312,22 @@ MIT - 详见 LICENSE 文件
 ## 附录：自动更新记录
 
 <!-- github-autopilot:updates:start -->
+
+### 2026-07-14 09:37
+
+已完成一项小改进，已由 GitHub autopilot 在验证后自动发布。
+
+改动内容：
+- 修复 `discover-skills.sh info` 的 assets 检测逻辑：不再用 `[[ -f "$dir/assets/"* ]]` 这种通配符判断，改为检测 `assets/` 目录是否非空。这样外部 skill 有多个 asset 文件时也会正确输出 `Has assets: ✓`。
+- 新增 `tests/discover-skills-info-assets.sh` 回归测试。
+- 同步更新 `README.md` 正文说明和 `CHANGELOG.md`，没有手动追加 README 自动更新附录。
+
+验证已通过：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- `bash -n tests/*.sh`
+- `bash tests/discover-skills-info-assets.sh`
+- `for test_script in tests/*.sh; do bash "$test_script"; done`
+- `git diff --check`
 
 ### 2026-07-13 09:36
 
