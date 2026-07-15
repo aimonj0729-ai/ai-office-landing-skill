@@ -5,6 +5,7 @@ All notable changes to AI Office Landing Skill will be documented in this file.
 ## [Unreleased]
 
 ### Changed
+- `setup-github-repo.sh` now includes the v2.4 `--cost-saving` and `--adapter deepseek-api` examples in its post-publish Usage block, so newly published repository instructions no longer regress to the older option set.
 - Claude Code autocomplete metadata and the installed `examples/workflow-demo.sh` now expose the v2.4 `--cost-saving` and `--adapter <name>` options, keeping the generated examples aligned with the documented adapter router.
 - `install.sh` now accepts `--force` / `--yes` / `-y` for unattended reinstall flows, and it fails fast with guidance instead of waiting for interactive input when a previous install already exists
 - `setup-github-repo.sh` now emits install examples that run `install.sh` from a temporary full repo checkout instead of a raw single-file script or the final install directory, and the README now documents the same constraint

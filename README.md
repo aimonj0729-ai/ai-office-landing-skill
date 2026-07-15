@@ -110,7 +110,7 @@ cd ai-office-landing-skill-main
 ./install.sh
 ```
 
-如果你使用 `./setup-github-repo.sh` 发布自己的仓库，脚本现在也会在发布成功后直接打印带真实 GitHub owner 的 tarball 和 `git clone` 安装命令，便于把可执行示例原样发给用户。
+如果你使用 `./setup-github-repo.sh` 发布自己的仓库，脚本现在也会在发布成功后直接打印带真实 GitHub owner 的 tarball 和 `git clone` 安装命令，并在 Usage 区展示 v2.4 的 `--cost-saving` / `--adapter deepseek-api` 示例，便于把可执行示例原样发给用户。
 
 如果当前机器还没装 `gh`，脚本输出的手动发布回退步骤现在也会直接指向当前 checkout；如先设置 `GITHUB_OWNER=your-name` 或 `REPO_OWNER=your-name`，回退说明里的 `git remote add origin` 也会自动带上真实 owner，减少手工替换。手动创建 GitHub 仓库时请保持仓库为空，不要预先勾选 README、`.gitignore` 或 License，否则下一步直接 `git push -u origin main` 很容易因为远端已有初始提交而失败。
 
@@ -312,6 +312,24 @@ MIT - 详见 LICENSE 文件
 ## 附录：自动更新记录
 
 <!-- github-autopilot:updates:start -->
+
+### 2026-07-15 12:04
+
+已完成一项小改进，已由 GitHub autopilot 在验证后自动发布。
+
+改动内容：
+- 更新 `setup-github-repo.sh` 发布成功后生成的 Usage 示例，补上 v2.4 的 `/landing --cost-saving` 和 `/landing --adapter deepseek-api`。
+- 新增 `tests/setup-github-repo-usage-options.sh`，用临时 `gh` shim 覆盖发布说明输出，防止示例再次回退到旧参数集。
+- 同步更新 `README.md` 对发布脚本输出的说明，以及 `CHANGELOG.md` 的 Unreleased 记录。
+
+验证已通过：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- `bash -n tests/setup-github-repo-usage-options.sh tests/setup-github-repo-source.sh tests/setup-github-repo-executable.sh`
+- `bash tests/setup-github-repo-usage-options.sh`
+- `bash tests/setup-github-repo-source.sh`
+- `bash tests/setup-github-repo-executable.sh`
+- `for test_script in tests/*.sh; do bash "$test_script"; done`
+- `git diff --check`
 
 ### 2026-07-14 09:37
 

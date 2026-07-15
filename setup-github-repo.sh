@@ -140,6 +140,8 @@ claude
 /landing --serial   # Serial execution
 /landing --human    # Human critic review
 /landing --resume   # Resume from checkpoint
+/landing --cost-saving          # Route MEDIUM/LOW executors to cheaper adapters
+/landing --adapter deepseek-api # Force a specific executor adapter
 ```
 
 ## Features
