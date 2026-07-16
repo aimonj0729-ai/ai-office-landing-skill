@@ -251,6 +251,8 @@ ls ~/.claude/skills/ai-office-landing/context/designer/
 
 `discover-skills.sh discover`、`info`、`load` 和 `suggest` 现在会先校验必填参数；无人值守脚本漏传 keyword、skill name 或 agent name 时会直接返回非零并打印对应用法，不会再继续执行空 skill 查询。
 
+`discover-skills.sh help` 和 `info` 现在保持只读行为：查看帮助或查询 skill 元数据不会创建 `ai-office/state.json`。只有 `discover`、`load`、`auto-designer` 和 `suggest` 这类需要写入工作流状态的命令才会初始化状态文件。
+
 ## 性能与成本
 
 **预计 Token 消耗:**
@@ -312,6 +314,22 @@ MIT - 详见 LICENSE 文件
 ## 附录：自动更新记录
 
 <!-- github-autopilot:updates:start -->
+
+### 2026-07-16 09:38
+
+完成了一项小而完整的脚本可靠性改进，已由 GitHub autopilot 在验证后自动发布。
+
+改动内容：
+- 调整 `discover-skills.sh`：`help` 和 `info` 现在是纯只读命令，不再提前加载/初始化 `state-management.sh`，因此不会仅因查看帮助或查询元数据就在当前目录创建 `ai-office/state.json`。
+- 新增 `tests/discover-skills-readonly.sh`：覆盖 `help` / `info` 不写状态，以及 `discover` 仍会正常初始化状态。
+- 同步更新 `README.md` 和 `CHANGELOG.md`，没有手动追加 README 文末自动更新附录。
+
+验证已通过：
+- `bash -n cost-tracker.sh discover-skills.sh install.sh orchestrator.sh setup-github-repo.sh state-management.sh`
+- `bash tests/discover-skills-readonly.sh`
+- `bash tests/discover-skills-args.sh`
+- `bash tests/discover-skills-info-assets.sh`
+- `for test_script in tests/*.sh; do bash "$test_script"; done`
 
 ### 2026-07-15 12:04
 

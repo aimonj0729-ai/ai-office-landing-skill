@@ -473,16 +473,18 @@ load_cached_registry() {
 run_skill_discovery() {
     local command="${1:-help}"
 
-    # Set up environment
-    source "$SKILL_ROOT/state-management.sh"
+    prepare_state_writes() {
+        source "$SKILL_ROOT/state-management.sh"
 
-    # Initialize state only when this is the first command in a workflow.
-    ensure_state_initialized
+        # Initialize state only when this is the first command in a workflow.
+        ensure_state_initialized
+    }
 
     case "$command" in
         discover)
             shift
             require_args "discover" "discover <keyword> [category]" 1 "$@" || return 1
+            prepare_state_writes
             discover_skills "$@"
             ;;
         info)
@@ -493,14 +495,17 @@ run_skill_discovery() {
         load)
             shift
             require_args "load" "load <agent> <skill-name>" 2 "$@" || return 1
+            prepare_state_writes
             load_skill_for_agent "$@"
             ;;
         auto-designer)
+            prepare_state_writes
             auto_discover_for_designer
             ;;
         suggest)
             shift
             require_args "suggest" "suggest <task-desc> [agent]" 1 "$@" || return 1
+            prepare_state_writes
             suggest_skills_for_task "$@"
             ;;
         cache)
